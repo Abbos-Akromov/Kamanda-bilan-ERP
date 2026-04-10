@@ -7,22 +7,25 @@ from apps.courses.models import Group, Enrollment
 from apps.accounts.models import User
 from .models import Message
 
-@login_required
-def chat_list(request):
-    user = request.user
+def get_chat_context(user):
+    """Helper to get sidebar groups and contacts based on user role"""
     if user.role == 'student':
         groups = Group.objects.filter(enrollment__student=user, enrollment__status='approved')
         contacts = User.objects.filter(role__in=['teacher', 'admin', 'assistant']).distinct()
     elif user.role == 'teacher':
         groups = Group.objects.filter(teacher=user)
-        contacts = User.objects.exclude(id=user.id)
+        contacts = User.objects.exclude(id=user.id).order_by('username')
     elif user.role == 'assistant':
         groups = Group.objects.filter(assistant=user)
-        contacts = User.objects.exclude(id=user.id)
+        contacts = User.objects.exclude(id=user.id).order_by('username')
     else: # Admin
         groups = Group.objects.all()
-        contacts = User.objects.exclude(id=user.id)
-        
+        contacts = User.objects.exclude(id=user.id).order_by('username')
+    return groups, contacts
+
+@login_required
+def chat_list(request):
+    groups, contacts = get_chat_context(request.user)
     return render(request, 'chat/room.html', {
         'groups': groups,
         'contacts': contacts,
@@ -34,28 +37,13 @@ def chat_direct(request, user_id):
     me = request.user
     other = get_object_or_404(User, id=user_id)
     
-    if request.method == 'POST':
-        content = request.POST.get('content')
-        if content:
-            Message.objects.create(sender=me, receiver=other, content=content, msg_type='direct')
-            return redirect('chat:direct', user_id=other.id)
-
     # History
     history = Message.objects.filter(
         Q(sender=me, receiver=other) | Q(sender=other, receiver=me),
         msg_type='direct'
     ).order_by('created_at')
     
-    # Context same as list + detail
-    if me.role == 'student':
-        groups = Group.objects.filter(enrollment__student=me, enrollment__status='approved')
-        contacts = User.objects.filter(role__in=['teacher', 'admin', 'assistant']).distinct()
-    elif me.role == 'teacher':
-        groups = Group.objects.filter(teacher=me)
-        contacts = User.objects.exclude(id=me.id)
-    else:
-        groups = Group.objects.all()
-        contacts = User.objects.exclude(id=me.id)
+    groups, contacts = get_chat_context(me)
 
     return render(request, 'chat/room.html', {
         'groups': groups,
@@ -70,7 +58,7 @@ def chat_group(request, group_id):
     me = request.user
     group = get_object_or_404(Group, id=group_id)
     
-    # Security check - ensure user is in group
+    # Security check
     can_access = False
     if me.role == 'admin': can_access = True
     elif me.role == 'teacher' and group.teacher == me: can_access = True
@@ -78,27 +66,11 @@ def chat_group(request, group_id):
     elif me.role == 'student' and Enrollment.objects.filter(group=group, student=me, status='approved').exists(): can_access = True
     
     if not can_access:
-        messages.error(request, "Ushbu guruh chatiga kirishga ruxsatingiz yo'q.")
-        return redirect('chat:index')
-
-    if request.method == 'POST':
-        content = request.POST.get('content')
-        if content:
-            Message.objects.create(sender=me, group=group, content=content, msg_type='group')
-            return redirect('chat:group', group_id=group.id)
+        messages.error(request, "Kirish cheklangan.")
+        return redirect('chat:list')
 
     history = Message.objects.filter(group=group, msg_type='group').order_by('created_at')
-
-    # Sidebar context
-    if me.role == 'student':
-        groups = Group.objects.filter(enrollment__student=me, enrollment__status='approved')
-        contacts = User.objects.filter(role__in=['teacher', 'admin', 'assistant']).distinct()
-    elif me.role == 'teacher':
-        groups = Group.objects.filter(teacher=me)
-        contacts = User.objects.exclude(id=me.id)
-    else:
-        groups = Group.objects.all()
-        contacts = User.objects.exclude(id=me.id)
+    groups, contacts = get_chat_context(me)
 
     return render(request, 'chat/room.html', {
         'groups': groups,

@@ -104,9 +104,13 @@
           <i class="fa-solid fa-award"></i>
           <span>Sertifikatlar</span>
         </a>
-        <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+        <a href="{% url 'notifications:admin_dashboard' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-bell"></i>
           <span>Xabarnomalar</span>
+        </a>
+        <a href="{% url 'chat:list' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+          <i class="fa-regular fa-comments"></i>
+          <span>Messenger</span>
         </a>
         
         <a href="{% url 'auth:logout' %}" class="flex items-center space-x-3 text-red-400 hover:text-red-300 hover:bg-[#252830] px-4 py-3 rounded-lg font-medium mt-12 transition">
@@ -203,7 +207,7 @@
             <div class="card-bg p-6 rounded-2xl border border-gray-700 shadow-lg">
               <h3 class="font-bold text-lg mb-6 text-white tracking-wide">Tezkor amallar</h3>
               <div class="space-y-3">
-                 <a href="#" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
+                 <a href="{% url 'notifications:admin_dashboard' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
                    <i class="fa-regular fa-bell opacity-70 w-5 text-center"></i> <span>Xabarnoma yuborish</span>
                  </a>
                  <a href="{% url 'certificates:issue' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
@@ -212,7 +216,7 @@
                  <a href="{% url 'salary:list' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
                    <i class="fa-solid fa-download opacity-70 w-5 text-center"></i> <span>Maosh eksport</span>
                  </a>
-                 <a href="#" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
+                 <a href="{% url 'payments:dashboard' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
                    <i class="fa-solid fa-dollar-sign opacity-70 w-5 text-center"></i> <span>To'lov tekshirish</span>
                  </a>
               </div>
@@ -832,10 +836,6 @@
                       <option value="{{ g.id }}">{{ g.name }} ({{ g.course.title }})</option>
                       {% endfor %}
                   </select>
-              </div>
-
-              <div class="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl mb-6 text-xs text-blue-200 leading-relaxed">
-                  <i class="fa-solid fa-envelope mr-1 text-blue-400"></i> O'quvchiga guruhga qo'shilgani va to'lov qilishi haqida avtomatik email va bildirishnoma yuboriladi.
               </div>
               
               <button type="submit" class="w-full bg-mint text-green-900 font-extrabold py-3.5 rounded-xl hover:bg-[#00cc88] transition shadow-lg uppercase tracking-widest text-sm">

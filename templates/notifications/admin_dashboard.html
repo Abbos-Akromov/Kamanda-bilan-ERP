@@ -1,0 +1,156 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Xabarnomalar Boshqaruvi — LMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0d0f14; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .glass-card { background: rgba(22, 24, 30, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .mint-gradient { background: linear-gradient(135deg, #00e699 0%, #00cc88 100%); }
+        .field-input { background: #1a1c23; border: 1px solid #374151; color: #fff; border-radius: 12px; transition: all 0.2s; }
+        .field-input:focus { border-color: #00e699; box-shadow: 0 0 0 2px rgba(0, 230, 153, 0.1); outline: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/inter-ui/3.19.3/inter.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+            <div class="flex items-center space-x-5">
+                <a href="{% url 'dashboard:admin' %}" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-gray-400 hover:text-white transition group">
+                    <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition"></i>
+                </a>
+                <div>
+                    <h1 class="text-3xl font-black text-white tracking-tight">Xabarnomalar</h1>
+                    <p class="text-gray-500 text-sm font-medium uppercase tracking-widest mt-1">Bildirishnomalar va E'lonlar Markazi</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="glass-card px-5 py-3 rounded-2xl flex items-center space-x-3">
+                    <i class="fa-solid fa-users text-mint"></i>
+                    <span class="text-white font-bold">{{ users_count }} <span class="text-gray-500 font-medium text-xs ml-1 uppercase">Foydalanuvchi</span></span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Send Broadcast Column -->
+            <div class="lg:col-span-1">
+                <div class="glass-card p-8 rounded-[32px] sticky top-8">
+                    <div class="flex items-center space-x-3 mb-8">
+                        <div class="w-10 h-10 rounded-xl bg-mint/10 flex items-center justify-center text-mint">
+                            <i class="fa-solid fa-bullhorn text-lg"></i>
+                        </div>
+                        <h2 class="text-xl font-black text-white">Yangi E'lon</h2>
+                    </div>
+
+                    <form action="{% url 'notifications:send_broadcast' %}" method="POST" class="space-y-6">
+                        {% csrf_token %}
+                        
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Xabar sarlavhasi</label>
+                            <input type="text" name="title" required placeholder="Masalan: Yangi dars yuklandi" class="w-full field-input px-4 py-3.5 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Qabul qiluvchilar</label>
+                            <select name="target" class="w-full field-input px-4 py-3.5 text-sm appearance-none cursor-pointer">
+                                <option value="all">Barcha foydalanuvchilar</option>
+                                <option value="students">Barcha studentlar</option>
+                                <option value="teachers">Barcha o'qituvchilar</option>
+                                <option value="assistants">Barcha yordamchilar</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Xabar matni</label>
+                            <textarea name="body" rows="5" required placeholder="E'lon matnini bu yerga yozing..." class="w-full field-input px-4 py-4 text-sm"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full mint-gradient text-green-900 font-black py-4 rounded-2xl shadow-xl shadow-mint/10 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-tight flex items-center justify-center">
+                            <i class="fa-solid fa-paper-plane mr-2 text-xs"></i> Xabarni yuborish
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- History Column -->
+            <div class="lg:col-span-2">
+                <div class="glass-card rounded-[32px] overflow-hidden">
+                    <div class="p-8 border-b border-white/5 flex items-center justify-between">
+                        <h3 class="text-xl font-black text-white">Yuborilgan xabarlar tarixi</h3>
+                        <span class="text-[10px] font-bold text-gray-500 bg-white/5 px-3 py-1.5 rounded-full uppercase tracking-tighter">Oxirgi 100 ta</span>
+                    </div>
+
+                    <div class="divide-y divide-white/5">
+                        {% for n in notifications %}
+                        <div class="p-6 hover:bg-white/[0.02] transition-colors group">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-start space-x-4">
+                                    <div class="w-10 h-10 rounded-xl {% if n.notif_type == 'announcement' %}bg-blue-500/10 text-blue-400{% else %}bg-mint/10 text-mint{% endif %} flex-shrink-0 flex items-center justify-center">
+                                        {% if n.notif_type == 'announcement' %}
+                                            <i class="fa-solid fa-bullhorn text-sm"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-bell text-sm"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h4 class="text-white font-bold">{{ n.title }}</h4>
+                                        <p class="text-gray-400 text-sm mt-1 leading-relaxed">{{ n.body }}</p>
+                                        <div class="flex items-center space-x-4 mt-3">
+                                            <span class="text-[10px] font-black uppercase text-gray-600 tracking-widest flex items-center">
+                                                <i class="fa-regular fa-user mr-1.5"></i> {{ n.user.get_full_name|default:n.user.username }}
+                                            </span>
+                                            <span class="text-[10px] font-black uppercase text-gray-600 tracking-widest flex items-center">
+                                                <i class="fa-regular fa-clock mr-1.5"></i> {{ n.created_at|date:"d.m.Y H:i" }}
+                                            </span>
+                                            {% if n.is_read %}
+                                                <span class="text-[10px] font-black uppercase text-mint tracking-widest">
+                                                    <i class="fa-solid fa-check-double mr-1"></i> O'qildi
+                                                </span>
+                                            {% else %}
+                                                <span class="text-[10px] font-black uppercase text-gray-600 tracking-widest">
+                                                    <i class="fa-solid fa-check mr-1"></i> Yuborildi
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="p-20 text-center">
+                            <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4 text-gray-600 text-2xl">
+                                <i class="fa-regular fa-folder-open"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium">Hozircha xabarlar mavjud emas.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="fixed bottom-6 right-6 space-y-3 z-50">
+        {% for m in messages %}
+        <div class="glass-card px-6 py-4 rounded-2xl shadow-2xl border-l-4 border-mint flex items-center space-x-3 animate-fade-in">
+            <i class="fa-solid fa-circle-check text-mint"></i>
+            <span class="text-white font-bold text-sm">{{ m }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</body>
+</html>

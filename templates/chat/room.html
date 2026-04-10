@@ -64,7 +64,7 @@
                     <h3 class="text-gray-500 text-[10px] font-bold tracking-widest uppercase mb-3 px-3">Guruhlar</h3>
                     <div class="space-y-1">
                         {% for g in groups %}
-                        <a href="{% url 'chat:group' g.id %}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'group' and chat_group.id == g.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
+                        <a href="{% url 'chat:group' g.id %}" data-search="{{ g.name }} {{ g.course.title }}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'group' and chat_group.id == g.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
                             <div class="w-10 h-10 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center text-mint font-bold">
                                 #
                             </div>
@@ -85,7 +85,7 @@
                     <h3 class="text-gray-500 text-[10px] font-bold tracking-widest uppercase mb-3 px-3">Kontaktlar</h3>
                     <div class="space-y-1">
                         {% for c in contacts %}
-                        <a href="{% url 'chat:direct' c.id %}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'direct' and chat_partner.id == c.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
+                        <a href="{% url 'chat:direct' c.id %}" data-search="{{ c.get_full_name|default:c.username }} {{ c.role }}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'direct' and chat_partner.id == c.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
                             <div class="relative">
                                 <div class="w-10 h-10 rounded-full bg-gray-800 border border-white/5 flex items-center justify-center font-bold text-gray-400">
                                     {{ c.username|first|upper }}
@@ -179,18 +179,95 @@
 
     <script>
         const chatLog = document.getElementById('chat-log');
-        if (chatLog) chatLog.scrollTop = chatLog.scrollHeight;
+        const messageInput = document.getElementById('msg-input');
+        const chatForm = messageInput ? messageInput.closest('form') : null;
 
-        const input = document.getElementById('msg-input');
-        if (input) {
-            input.addEventListener('input', function() {
+        // Determine room name
+        {% if mode == 'group' %}
+            const roomName = "group_{{ chat_group.id }}";
+            const groupId = "{{ chat_group.id }}";
+            const receiverId = null;
+        {% elif mode == 'direct' %}
+            {% with me=user.id other=chat_partner.id %}
+                const roomName = "direct_{% if me < other %}{{ me }}_{{ other }}{% else %}{{ other }}_{{ me }}{% endif %}";
+            {% endwith %}
+            const groupId = null;
+            const receiverId = "{{ chat_partner.id }}";
+        {% else %}
+            const roomName = null;
+        {% endif %}
+
+        if (roomName) {
+            const chatSocket = new WebSocket(
+                (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 
+                window.location.host + '/ws/chat/' + roomName + '/'
+            );
+
+            chatSocket.onmessage = function(e) {
+                const data = json_parse(e.data);
+                if (data.message) appendMessage(data);
+            };
+
+            chatSocket.onclose = function(e) { console.error('Chat socket closed'); };
+
+            if (chatForm) {
+                chatForm.onsubmit = function(e) {
+                    e.preventDefault();
+                    const msg = messageInput.value.trim();
+                    if (msg && chatSocket.readyState === WebSocket.OPEN) {
+                        chatSocket.send(JSON.stringify({
+                            'message': msg,
+                            'receiver_id': receiverId,
+                            'group_id': groupId
+                        }));
+                        messageInput.value = '';
+                        messageInput.style.height = 'auto';
+                    }
+                };
+            }
+        }
+
+        function json_parse(str) { try { return JSON.parse(str); } catch(e) { return {}; } }
+
+        function appendMessage(data) {
+            const isMe = data.sender_id == "{{ user.id }}";
+            const div = document.createElement('div');
+            div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in`;
+            div.innerHTML = `
+                <div class="max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : ''}">
+                    ${!isMe ? `<span class="text-[10px] font-bold text-gray-500 mb-1 ml-2 uppercase">${data.sender_name}</span>` : ''}
+                    <div class="px-4 py-2.5 text-sm shadow-xl ${isMe ? 'chat-me' : 'chat-other'} font-medium">
+                        ${data.message}
+                    </div>
+                    <span class="message-time mt-1 mx-2">${data.created_at}</span>
+                </div>
+            `;
+            chatLog.appendChild(div);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        // Sidebar Search
+        const searchInput = document.querySelector('input[placeholder="Qidirish..."]');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                document.querySelectorAll('[data-search]').forEach(item => {
+                    const text = item.getAttribute('data-search').toLowerCase();
+                    item.style.display = text.includes(query) ? 'flex' : 'none';
+                });
+            });
+        }
+
+        if (chatLog) chatLog.scrollTop = chatLog.scrollHeight;
+        if (messageInput) {
+            messageInput.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
             });
-            input.addEventListener('keydown', function(e) {
+            messageInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    this.closest('form').submit();
+                    chatForm.dispatchEvent(new Event('submit'));
                 }
             });
         }
