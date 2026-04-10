@@ -162,6 +162,31 @@ def admin_dashboard(request):
                 messages.success(request, f"Yangi foydalanuvchi ({role}) qo'shildi!")
                 return redirect('dashboard:admin')
                 
+        # Handle Course Creation
+        elif 'create_course' in request.POST:
+            title = request.POST.get('title')
+            description = request.POST.get('description', '')
+            price = request.POST.get('price', 0)
+            category = request.POST.get('category', 'IT')
+            teacher_id = request.POST.get('teacher_id')
+            thumbnail = request.FILES.get('thumbnail')
+            
+            try:
+                teacher = User.objects.get(id=teacher_id, role='teacher')
+                from apps.courses.models import Course
+                Course.objects.create(
+                    title=title,
+                    description=description,
+                    price=price,
+                    category=category,
+                    teacher=teacher,
+                    thumbnail=thumbnail
+                )
+                messages.success(request, f"'{title}' kursi muvaffaqiyatli qo'shildi!")
+            except Exception as e:
+                messages.error(request, f"Xatolik: {str(e)}")
+            return redirect('dashboard:admin')
+
         # Handle Group Creation
         elif 'create_group' in request.POST:
             name = request.POST.get('name')
@@ -190,21 +215,58 @@ def admin_dashboard(request):
                 messages.error(request, f"Xatolik: {str(e)}")
                 return redirect('dashboard:admin')
 
-        # Handle Enrollment Approval
-        elif 'enrollment_action' in request.POST:
-            action = request.POST.get('enrollment_action')
-            enrollment_id = request.POST.get('enrollment_id')
-            enr = Enrollment.objects.filter(id=enrollment_id).first()
-            if enr:
-                if action == 'approve':
-                    enr.status = 'approved'
-                    enr.approved_by = request.user
-                    enr.save()
-                    messages.success(request, "Ro'yxatdan o'tish tasdiqlandi!")
-                elif action == 'reject':
-                    enr.status = 'rejected'
-                    enr.save()
-                    messages.success(request, "Ro'yxatdan o'tish rad etildi!")
+            return redirect('dashboard:admin')
+
+        # Handle Manual Student to Group Assignment
+        elif 'assign_student_to_group' in request.POST:
+            student_id = request.POST.get('student_id')
+            group_id = request.POST.get('group_id')
+            
+            try:
+                from apps.notifications.models import Notification
+                from django.core.mail import send_mail
+                from apps.courses.models import Group, Enrollment
+                from config.settings import DEFAULT_FROM_EMAIL
+                
+                student = get_object_or_404(User, id=student_id, role='student')
+                group = get_object_or_404(Group, id=group_id)
+                
+                # Check for existing
+                if Enrollment.objects.filter(student=student, group=group).exists():
+                    messages.warning(request, f"{student.first_name} allaqachon '{group.name}' guruhida mavjud!")
+                else:
+                    enr = Enrollment.objects.create(
+                        student=student, 
+                        group=group, 
+                        status='approved',
+                        approved_by=request.user
+                    )
+                    
+                    # 1. Internal Notification
+                    Notification.objects.create(
+                        user=student,
+                        title="Guruhga qo'shildingiz ✅",
+                        body=f"Siz admin tomonidan '{group.name}' guruhiga qo'shildingiz. Iltimos, birinchi oy uchun {group.course.price:,.0f} UZS to'lovni amalga oshiring.",
+                        notif_type='payment_reminder'
+                    )
+                    
+                    # 2. Email Notification
+                    try:
+                        subject = "LMS Platform: Guruhga qo'shilish tasdiqlandi"
+                        message = (
+                            f"Salom {student.first_name or student.username},\n\n"
+                            f"Siz muvaffaqiyatli ravishda '{group.name}' ({group.course.title}) guruhiga qo'shildingiz.\n\n"
+                            f"Kurs oylik to'lovi: {group.course.price:,.0f} UZS.\n"
+                            "Iltimos, darslar boshlanishidan oldin to'lovni amalga oshiring.\n\n"
+                            "Hurmat bilan,\nAdmin jamoasi"
+                        )
+                        send_mail(subject, message, DEFAULT_FROM_EMAIL, [student.email], fail_silently=True)
+                    except Exception as e:
+                        print(f"Email yuborishda xatolik: {e}")
+
+                    messages.success(request, f"{student.get_full_name() or student.username} muvaffaqiyatli '{group.name}' guruhiga qo'shildi!")
+            except Exception as e:
+                messages.error(request, f"Xatolik: {str(e)}")
             return redirect('dashboard:admin')
 
     # Metrics
@@ -224,7 +286,14 @@ def admin_dashboard(request):
     pending_count = pending_enrollments_all.count()
     
     # Expose users as well if needed in a modal
-    users = User.objects.exclude(id=request.user.id).order_by('-date_joined')
+    from django.db.models import Exists, OuterRef
+    from apps.courses.models import Enrollment
+    
+    users = User.objects.exclude(id=request.user.id).annotate(
+        has_approved_group=Exists(
+            Enrollment.objects.filter(student=OuterRef('pk'), status='approved')
+        )
+    ).order_by('-date_joined')
     teachers_only = User.objects.filter(role='teacher', is_active=True)
     assistants_only = User.objects.filter(role='assistant', is_active=True)
     all_courses = Course.objects.filter(is_active=True)
