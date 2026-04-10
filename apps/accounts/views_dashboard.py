@@ -56,6 +56,9 @@ def generate_lessons(group, startDate=None, lessonCountStart=None):
 @login_required
 @role_required('student')
 def student_dashboard(request):
+    from apps.notifications.models import Notification
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
+    
     enrollments = Enrollment.objects.filter(student=request.user)
     
     from apps.certificates.models import Certificate
@@ -71,6 +74,7 @@ def student_dashboard(request):
         'certificates': certificates,
         'active_enrollment': active_enrollment,
         'has_unpaid': unpaid_enrollment,
+        'unread_notifications': unread_notifications,
     }
     
     if active_enrollment:
@@ -108,7 +112,9 @@ def teacher_dashboard(request):
     from apps.courses.models import Group, Enrollment, Lesson
     from apps.salary.models import Salary
     from apps.attendance.models import Attendance
+    from apps.notifications.models import Notification
     from django.utils import timezone
+    from datetime import datetime, timedelta
     
     today = timezone.now().date()
     groups = Group.objects.filter(teacher=request.user)
@@ -140,6 +146,29 @@ def teacher_dashboard(request):
             'is_new': g.start_date >= today
         })
         
+    # --- 10 daqiqa oldin dars eslatmasi mantiqi ---
+    now = timezone.now()
+    for g in groups:
+        # Guruhning dars boshlanish vaqtini bugungi sana bilan birlashtiramiz
+        lesson_start = datetime.combine(now.date(), g.lesson_start_time)
+        lesson_start = timezone.make_aware(lesson_start)
+        
+        time_diff = lesson_start - now
+        # Agar dars boshlanishiga 0 dan 10 daqiqagacha vaqt qolgan bo'lsa
+        if timedelta(minutes=0) < time_diff <= timedelta(minutes=10):
+            notif_title = f"Dars boshlanishiga 10 daqiqa qoldi: {g.name}"
+            # Shu dars uchun bugun hali xabar yuborilmagan bo'lsa yaratish
+            if not Notification.objects.filter(user=request.user, title=notif_title, created_at__date=now.date()).exists():
+                Notification.objects.create(
+                    user=request.user,
+                    title=notif_title,
+                    body=f"Sizning '{g.name}' guruhingizdagi darsingiz {g.lesson_start_time.strftime('%H:%M')} da boshlanadi. Iltimos, tayyorgarlik ko'ring.",
+                    notif_type='lesson_reminder'
+                )
+    
+    # O'qilmagan xabarlarni olish
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
+        
     context = {
         'total_students': total_students,
         'groups_count': groups.count(),
@@ -149,6 +178,7 @@ def teacher_dashboard(request):
         'today_lessons': today_lessons,
         'my_students': my_students,
         'today_attendances': today_attendances,
+        'unread_notifications': unread_notifications,
     }
     return render(request, 'dashboard/teacher.html', context)
 
@@ -159,6 +189,9 @@ def assistant_dashboard(request):
     from apps.salary.models import Salary
     from apps.attendance.models import Attendance
     from django.utils import timezone
+    
+    from apps.notifications.models import Notification
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
     
     groups = Group.objects.filter(assistant=request.user)
     total_students = Enrollment.objects.filter(group__in=groups, status='approved').values('student').distinct().count()
@@ -179,6 +212,7 @@ def assistant_dashboard(request):
         'groups_count': groups.count(),
         'salary_amount': salary_amount,
         'groups_with_stats': groups_with_stats,
+        'unread_notifications': unread_notifications,
     }
     return render(request, 'dashboard/assistant.html', context)
 
@@ -329,8 +363,11 @@ def admin_dashboard(request):
     
     # Financial Stats (Consistent with centers balance)
     from apps.payments.models import Payment
+    from apps.notifications.models import Notification
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
+    
     from apps.salary.models import Salary
-    from apps.courses.models import Course # Ensure course is available for context if needed
+    from apps.courses.models import Course, Group, Enrollment
     
     gross_total = Payment.objects.filter(status='success').exclude(method='salary_transfer').aggregate(total=Sum('amount'))['total'] or 0
     total_paid = Salary.objects.filter(is_paid=True).aggregate(total=Sum('total_amount'))['total'] or 0
@@ -369,6 +406,7 @@ def admin_dashboard(request):
         'active_groups': active_groups,
         'pending_count': pending_count,
         'recent_enrollments': pending_enrollments_all[:5],
+        'unread_notifications': unread_notifications,
     }
     return render(request, 'dashboard/admin.html', context)
 

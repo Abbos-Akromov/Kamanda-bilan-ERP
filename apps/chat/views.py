@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Max, Value
+from django.db.models.functions import Coalesce, Greatest
+import datetime
 from django.contrib import messages
 
 from apps.courses.models import Group, Enrollment
@@ -18,9 +20,18 @@ def get_chat_context(user):
         groups = Group.objects.filter(assistant=user)
     else: # Admin
         groups = Group.objects.all()
+    # Smart sorting for contacts: people you messaged recently appear first
+    epoch = datetime.datetime(1900, 1, 1)
+    contacts = User.objects.exclude(id=user.id).annotate(
+        last_sent=Max('sent_messages__created_at', filter=Q(sent_messages__receiver=user)),
+        last_received=Max('received_messages__created_at', filter=Q(received_messages__sender=user))
+    ).annotate(
+        latest_activity=Greatest(
+            Coalesce('last_sent', Value(epoch)),
+            Coalesce('last_received', Value(epoch))
+        )
+    ).order_by('-latest_activity', 'role', 'first_name', 'username')
 
-    # All users can see all other users
-    contacts = User.objects.exclude(id=user.id).order_by('role', 'username')
     return groups, contacts
 
 @login_required
