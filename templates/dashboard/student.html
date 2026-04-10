@@ -74,6 +74,11 @@
         </a>
         {% endif %}
         
+        <a href="{% url 'chat:list' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+          <i class="fa-regular fa-comment-dots"></i>
+          <span>Messenger</span>
+        </a>
+        
         <a href="{% url 'auth:logout' %}" class="flex items-center space-x-3 text-red-400 hover:text-red-300 hover:bg-[#252830] px-4 py-3 rounded-lg font-medium mt-12 transition">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
           <span>Chiqish</span>
@@ -323,6 +328,14 @@
       </div>
     </div>
   </div>
+
+  <!-- Floating Chat Notification for Students -->
+  <a href="{% url 'chat:list' %}" class="fixed bottom-6 right-6 z-50">
+    <div class="w-14 h-14 rounded-full bg-mint text-green-900 shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group">
+      <i class="fa-regular fa-comment-dots text-2xl group-hover:rotate-12 transition-transform"></i>
+      <div class="absolute -top-1 -right-1 bg-red-500 w-4 h-4 rounded-full border-2 border-[#1a1c23]"></div>
+    </div>
+  </a>
 
   <script>
     function openStudentPayModal(enrId, title, price, paid) {

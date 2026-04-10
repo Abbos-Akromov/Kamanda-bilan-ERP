@@ -36,11 +36,19 @@ def salary_list(request):
     # Filter by user if not admin
     if user.role != 'admin':
         salaries = salaries.filter(user=user)
+        # Calculate totals for teacher/assistant
+        pending_balance = Salary.objects.filter(user=user, is_paid=False).aggregate(total=Sum('total_amount'))['total'] or 0
+        history_total = Salary.objects.filter(user=user, is_paid=True).aggregate(total=Sum('total_amount'))['total'] or 0
+    else:
+        pending_balance = 0
+        history_total = 0
         
     context = {
         'salaries': salaries,
         'latest_month': latest_month,
         'filtered_month': month_filter,
+        'pending_balance': pending_balance,
+        'history_total': history_total,
     }
 
     # Admin-only stats

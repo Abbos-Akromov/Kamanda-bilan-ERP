@@ -9,18 +9,18 @@ from .models import Message
 
 def get_chat_context(user):
     """Helper to get sidebar groups and contacts based on user role"""
+    # Previously limited, now everyone can message everyone
     if user.role == 'student':
         groups = Group.objects.filter(enrollment__student=user, enrollment__status='approved')
-        contacts = User.objects.filter(role__in=['teacher', 'admin', 'assistant']).distinct()
     elif user.role == 'teacher':
         groups = Group.objects.filter(teacher=user)
-        contacts = User.objects.exclude(id=user.id).order_by('username')
     elif user.role == 'assistant':
         groups = Group.objects.filter(assistant=user)
-        contacts = User.objects.exclude(id=user.id).order_by('username')
     else: # Admin
         groups = Group.objects.all()
-        contacts = User.objects.exclude(id=user.id).order_by('username')
+
+    # All users can see all other users
+    contacts = User.objects.exclude(id=user.id).order_by('role', 'username')
     return groups, contacts
 
 @login_required

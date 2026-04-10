@@ -74,7 +74,7 @@
           <i class="fa-solid fa-dollar-sign px-1"></i>
           <span>Maosh</span>
         </a>
-        <a href="{% url 'chat:index' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+        <a href="{% url 'chat:list' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-message"></i>
           <span>Chat</span>
         </a>
@@ -208,7 +208,7 @@
   </div>
 
   <!-- Scroll arrow at bottom -->
-  <a href="{% url 'chat:index' %}" class="fixed bottom-6 right-6 z-50">
+  <a href="{% url 'chat:list' %}" class="fixed bottom-6 right-6 z-50">
     <div class="w-12 h-12 rounded-full border border-gray-700 bg-[#252830] shadow-2xl flex items-center justify-center text-mint cursor-pointer hover:bg-gray-800 transition transform hover:scale-110">
       <i class="fa-solid fa-comment-dots text-xl"></i>
     </div>
