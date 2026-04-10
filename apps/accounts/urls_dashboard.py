@@ -14,6 +14,10 @@ urlpatterns = [
     path('user/<int:user_id>/delete/', views_dashboard.delete_user, name='delete_user'),
     path('enrollment/<int:enrollment_id>/remove/', views_dashboard.remove_from_group, name='remove_from_group'),
     path('enrollment/<int:enrollment_id>/change-group/', views_dashboard.change_student_group, name='change_student_group'),
+    path('group/<int:group_id>/update/', views_dashboard.update_group, name='update_group'),
+    path('group/<int:group_id>/delete/', views_dashboard.delete_group, name='delete_group'),
+    path('group/<int:group_id>/extend-schedule/', views_dashboard.extend_lessons, name='extend_lessons'),
     path('group/<int:group_id>/update-percent/', views_dashboard.update_group_percent, name='update_group_percent'),
+    path('lesson/<int:lesson_id>/update/', views_dashboard.update_lesson, name='update_lesson'),
 ]
 

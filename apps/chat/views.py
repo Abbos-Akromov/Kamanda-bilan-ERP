@@ -11,6 +11,7 @@ from .models import Message
 
 def get_chat_context(user):
     """Helper to get sidebar groups and contacts based on user role"""
+    # Previously limited, now everyone can message everyone
     if user.role == 'student':
         groups = Group.objects.filter(enrollment__student=user, enrollment__status='approved')
     elif user.role == 'teacher':
@@ -29,8 +30,8 @@ def get_chat_context(user):
             Coalesce('last_sent', Value(epoch)),
             Coalesce('last_received', Value(epoch))
         )
-    ).order_by('-latest_activity', 'first_name', 'username')
-    
+    ).order_by('-latest_activity', 'role', 'first_name', 'username')
+
     return groups, contacts
 
 @login_required

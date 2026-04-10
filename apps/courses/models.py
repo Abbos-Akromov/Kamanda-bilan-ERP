@@ -14,7 +14,12 @@ class Course(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Group(models.Model):
-    SCHEDULE_TYPES = [('3_days','Haftada 3 kun'),('5_days','Haftada 5 kun'),('daily','Har kuni')]
+    SCHEDULE_TYPES = [
+        ('3_days_toq','Haftada 3 kun (Toq kunlar)'),
+        ('3_days_juft','Haftada 3 kun (Juft kunlar)'),
+        ('5_days','Haftada 5 kun'),
+        ('daily','Har kuni')
+    ]
     name = models.CharField(max_length=100)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='groups_taught')
@@ -22,8 +27,9 @@ class Group(models.Model):
     max_students = models.IntegerField(default=20)
     start_date = models.DateField()
     end_date = models.DateField()
-    schedule_type = models.CharField(max_length=10, choices=SCHEDULE_TYPES, default='3_days')
+    schedule_type = models.CharField(max_length=20, choices=SCHEDULE_TYPES, default='3_days_toq')
     lesson_start_time = models.TimeField(default="10:00")
+    lesson_end_time = models.TimeField(default="11:30")
     is_active = models.BooleanField(default=True)
     teacher_percent = models.IntegerField(default=40)
     assistant_percent = models.IntegerField(default=15)

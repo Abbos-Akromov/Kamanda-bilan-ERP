@@ -16,7 +16,42 @@ def dashboard_home(request):
 from apps.homework.models import Homework
 from apps.attendance.models import Attendance
 from apps.exams.models import Exam, ExamResult
-from apps.courses.models import Lesson
+from apps.courses.models import Lesson, Group, Course, Enrollment
+import datetime
+
+def generate_lessons(group, startDate=None, lessonCountStart=None):
+    """Auto-generates 30 days of lessons based on schedule type"""
+    current_date = startDate or group.start_date
+    lessons_created = lessonCountStart or 0
+    days_to_check = 30
+    
+    if group.schedule_type in ['3_days_toq', '3_days']:
+        target_days = [0, 2, 4] # Mon, Wed, Fri
+    elif group.schedule_type == '3_days_juft':
+        target_days = [1, 3, 5] # Tue, Thu, Sat
+    elif group.schedule_type == '5_days':
+        target_days = [0, 1, 2, 3, 4]
+    else: # daily
+        target_days = [0, 1, 2, 3, 4, 5, 6]
+
+    for i in range(days_to_check + 1):
+        target_date = current_date + datetime.timedelta(days=i)
+        if target_date > group.end_date and not startDate: # Only cap by end_date if it's initial generation
+             break
+        
+        # If startDate is provided, we just want 30 days regardless of end_date (extension mode)
+        # But if i == 0 and startDate == last lesson date, skip it to avoid duplicates
+        if startDate and i == 0: continue
+
+        if target_date.weekday() in target_days:
+            lessons_created += 1
+            Lesson.objects.create(
+                group=group,
+                title=f"{lessons_created}-dars. {group.course.title}",
+                date=target_date,
+                order=lessons_created
+            )
+    return lessons_created
 
 @login_required
 @role_required('student')
@@ -242,8 +277,9 @@ def admin_dashboard(request):
             assistant_id = request.POST.get('assistant_id')
             start_date = request.POST.get('start_date')
             end_date = request.POST.get('end_date')
-            schedule_type = request.POST.get('schedule_type', '3_days')
+            schedule_type = request.POST.get('schedule_type', '3_days_toq')
             start_time = request.POST.get('lesson_start_time', '10:00')
+            end_time = request.POST.get('lesson_end_time', '11:30')
             
             try:
                 from apps.courses.models import Course
@@ -251,12 +287,18 @@ def admin_dashboard(request):
                 teacher = User.objects.get(id=teacher_id)
                 assistant = User.objects.get(id=assistant_id) if assistant_id else None
                 
-                Group.objects.create(
+                group = Group.objects.create(
                     name=name, course=course, teacher=teacher, assistant=assistant,
                     start_date=start_date, end_date=end_date,
-                    schedule_type=schedule_type, lesson_start_time=start_time
+                    schedule_type=schedule_type, 
+                    lesson_start_time=start_time,
+                    lesson_end_time=end_time
                 )
-                messages.success(request, f"'{name}' guruhi muvaffaqiyatli ochildi va darslar avtomatik yaratildi!")
+                
+                # Auto generate lessons
+                generate_lessons(group)
+                
+                messages.success(request, f"'{name}' guruhi ochildi va darslar avtomatik yaratildi!")
                 return redirect('dashboard:admin')
             except Exception as e:
                 messages.error(request, f"Xatolik: {str(e)}")
@@ -372,11 +414,12 @@ def admin_dashboard(request):
 @login_required
 @role_required('admin')
 def group_preview(request, group_id):
-    from apps.courses.models import Group, Enrollment
+    from apps.courses.models import Group, Enrollment, Lesson
     from django.shortcuts import get_object_or_404
 
     group = get_object_or_404(Group.objects.select_related('course', 'teacher', 'assistant'), id=group_id)
     enrollments = Enrollment.objects.filter(group=group).select_related('student').order_by('status')
+    lessons = Lesson.objects.filter(group=group).order_by('date', 'order')
 
     students_data = []
     for enr in enrollments:
@@ -395,8 +438,17 @@ def group_preview(request, group_id):
     context = {
         'group': group,
         'students_data': students_data,
+        'lessons': lessons,
         'center_pct': 100 - group.teacher_percent - group.assistant_percent,
     }
+
+    if request.user.role == 'admin':
+        context.update({
+            'teachers_only': User.objects.filter(role='teacher'),
+            'assistants_only': User.objects.filter(role='assistant'),
+            'SCHEDULE_TYPES': Group.SCHEDULE_TYPES
+        })
+
     return render(request, 'dashboard/fragments/group_preview.html', context)
 
 
@@ -558,4 +610,75 @@ def update_group_percent(request, group_id):
             messages.success(request, f"{group.name}: Ustoz {t_pct}%, Yordamchi {a_pct}%, Markaz {center_pct}% foizlari yangilandi.")
         except ValueError:
             messages.error(request, "Foizlar butun son bo'lishi kerak.")
+    return redirect('dashboard:admin')
+# ─────────────────────────────────────────────
+# ADMIN: Guruhni tahrirlash
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def update_group(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    if request.method == 'POST':
+        group.name = request.POST.get('name', group.name)
+        group.teacher_id = request.POST.get('teacher_id', group.teacher_id)
+        group.assistant_id = request.POST.get('assistant_id', group.assistant_id) or None
+        group.lesson_start_time = request.POST.get('lesson_start_time', group.lesson_start_time)
+        group.lesson_end_time = request.POST.get('lesson_end_time', group.lesson_end_time)
+        group.schedule_type = request.POST.get('schedule_type', group.schedule_type)
+        group.is_active = request.POST.get('is_active') == '1'
+        group.save()
+        messages.success(request, f"'{group.name}' guruhi tahrirlandi.")
+    return redirect('dashboard:admin')
+
+# ─────────────────────────────────────────────
+# ADMIN: Guruhni o'chirish
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def delete_group(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    if request.method == 'POST':
+        name = group.name
+        group.delete()
+        messages.success(request, f"'{name}' guruhi ochirildi.")
+    return redirect('dashboard:admin')
+
+# ─────────────────────────────────────────────
+# ADMIN: Jadvalni 1 oyga uzaytirish
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def extend_lessons(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    if request.method == 'POST':
+        last_lesson = Lesson.objects.filter(group=group).order_by('-date').first()
+        if last_lesson:
+            generate_lessons(group, startDate=last_lesson.date, lessonCountStart=last_lesson.order)
+            messages.success(request, f"'{group.name}' jadvali yana 1 oyga uzaytirildi.")
+        else:
+            generate_lessons(group)
+            messages.success(request, f"'{group.name}' jadvali yangidan yaratildi.")
+    return redirect('dashboard:admin')
+
+# ─────────────────────────────────────────────
+# ADMIN: Darsni yangilash (Fors-major)
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def update_lesson(request, lesson_id):
+    from django.http import JsonResponse
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    if request.method == 'POST':
+        new_date = request.POST.get('date')
+        new_title = request.POST.get('title')
+        if new_date:
+            lesson.date = new_date
+        if new_title:
+            lesson.title = new_title
+        lesson.save()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f"Dars yangilandi: {lesson.title}"})
+            
+        messages.success(request, f"Dars jadvali yangilandi: {lesson.title}")
     return redirect('dashboard:admin')

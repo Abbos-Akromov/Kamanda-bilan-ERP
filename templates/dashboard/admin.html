@@ -466,14 +466,21 @@
                 <div>
                     <label class="block text-gray-300 text-sm font-medium mb-1.5">Haftalik Jadval</label>
                     <select name="schedule_type" required class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-mint transition">
-                        <option value="3_days">Haftada 3 kun (Du-Cho-Ju)</option>
+                        <option value="3_days_toq">Haftada 3 kun (Toq kunlar: Du-Cho-Ju)</option>
+                        <option value="3_days_juft">Haftada 3 kun (Juft kunlar: Se-Pay-Sha)</option>
                         <option value="5_days">Haftada 5 kun (Du-Ju)</option>
-                        <option value="daily">Har kuni (Du-Sha)</option>
+                        <option value="daily">Har kuni (Du-Ya)</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Dars Vaqti</label>
-                    <input type="time" name="lesson_start_time" required value="10:00" class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-mint transition">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-gray-300 text-[10px] font-bold uppercase mb-1">Boshlanish</label>
+                        <input type="time" name="lesson_start_time" required value="10:00" class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-2 py-2 focus:outline-none focus:border-mint transition text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 text-[10px] font-bold uppercase mb-1">Tugash</label>
+                        <input type="time" name="lesson_end_time" required value="11:30" class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-2 py-2 focus:outline-none focus:border-mint transition text-sm">
+                    </div>
                 </div>
               </div>
               
