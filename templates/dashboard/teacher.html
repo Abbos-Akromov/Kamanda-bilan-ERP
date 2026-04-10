@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-3xl font-bold mb-6">O'qituvchi Kabineti</h1>
+<div class="bg-white p-6 rounded shadow mb-6">
+    <h2 class="text-xl font-bold mb-4">O'qitilayotgan kurslar</h2>
+    <ul>
+    {% for course in courses %}
+        <li class="mb-2"><a href="{% url 'courses:detail' course.id %}" class="text-blue-600 hover:underline">{{ course.title }}</a></li>
+    {% empty %}
+        <p class="text-sm text-gray-500">Hech qanday kurs topilmadi.</p>
+    {% endfor %}
+    </ul>
+</div>
+{% endblock %}

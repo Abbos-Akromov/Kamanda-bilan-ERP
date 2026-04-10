@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white rounded shadow">
+    <div class="p-4 border-b bg-gray-50">
+        <h2 class="text-xl font-bold">Chat Room: {{ room_name }}</h2>
+    </div>
+    <div id="chat-log" class="p-4 h-96 overflow-y-scroll bg-gray-100 space-y-4">
+        <!-- Messages will appear here -->
+    </div>
+    <div class="p-4 border-t bg-white flex">
+        <input id="chat-message-input" type="text" class="flex-grow border rounded-l p-3 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Xabar yozing...">
+        <button id="chat-message-submit" class="bg-indigo-600 text-white px-6 rounded-r font-bold hover:bg-indigo-700">Yuborish</button>
+    </div>
+</div>
+
+{{ room_name|json_script:"room-name" }}
+<script>
+    const roomName = JSON.parse(document.getElementById('room-name').textContent);
+    const chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/' + roomName + '/');
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const log = document.querySelector('#chat-log');
+        const d = document.createElement('div');
+        d.className = 'bg-white p-3 rounded shadow-sm inline-block max-w-[80%]';
+        d.innerHTML = `<span class="font-bold text-xs text-gray-500 block mb-1">${data.sender}</span><p>${data.message}</p>`;
+        
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(d);
+        log.appendChild(wrapper);
+        log.scrollTop = log.scrollHeight;
+    };
+
+    document.querySelector('#chat-message-input').focus();
+    document.querySelector('#chat-message-input').onkeyup = function(e) {
+        if (e.keyCode === 13) { document.querySelector('#chat-message-submit').click(); }
+    };
+
+    document.querySelector('#chat-message-submit').onclick = function(e) {
+        const messageInputDom = document.querySelector('#chat-message-input');
+        chatSocket.send(JSON.stringify({'message': messageInputDom.value}));
+        messageInputDom.value = '';
+    };
+</script>
+{% endblock %}

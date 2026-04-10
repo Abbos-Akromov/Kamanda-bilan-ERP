@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold">Oylik Maoshlar</h1>
+    <form action="{% url 'salary:calculate' %}" method="POST" class="flex gap-2">
+        {% csrf_token %}
+        <input type="month" name="month" required class="border rounded p-2">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Hisoblash</button>
+    </form>
+</div>
+<div class="bg-white shadow rounded overflow-hidden">
+    <table class="min-w-full text-left">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="p-4 border-b">Xodim</th>
+                <th class="p-4 border-b">Oy</th>
+                <th class="p-4 border-b">Talabalar</th>
+                <th class="p-4 border-b">Summa</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in salaries %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-4">{{ s.user.email }} ({{ s.user.role }})</td>
+                <td class="p-4">{{ s.month|date:"Y-m" }}</td>
+                <td class="p-4">{{ s.students_count }} ta</td>
+                <td class="p-4 font-bold text-indigo-600">{{ s.total_amount }} UZS</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

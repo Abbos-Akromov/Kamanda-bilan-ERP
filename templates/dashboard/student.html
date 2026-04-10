@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-3xl font-bold mb-6">Talaba Kabineti</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-bold mb-4">Mening kurslarim</h2>
+        {% for enr in enrollments %}
+            <div class="mb-2 p-3 border rounded">
+                <p class="font-semibold">{{ enr.group.course.title }} ({{ enr.group.name }})</p>
+                <p class="text-sm text-gray-600">Status: {{ enr.get_status_display }}</p>
+                {% if enr.status == 'approved' %}
+                <a href="{% url 'courses:lesson_list' enr.group.id %}" class="text-indigo-600 text-sm hover:underline mt-2 inline-block">Darslarga o'tish</a>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="text-sm text-gray-500">Siz hali hech qaysi kursga a'zo bo'lmagansiz.</p>
+        {% endfor %}
+        <a href="/" class="mt-4 inline-block bg-indigo-50 px-4 py-2 rounded text-indigo-700 hover:bg-indigo-100">Barcha kurslarni ko'rish</a>
+    </div>
+</div>
+{% endblock %}
