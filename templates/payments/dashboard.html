@@ -88,11 +88,59 @@ input,select,button{font-family:Inter,sans-serif}
   <!-- TABS -->
   <div style="border-bottom:1px solid #374151;margin-bottom:20px;display:flex;gap:0;">
     <button class="tab-btn active" onclick="switchTab('students',this)"><i class="fa-solid fa-users" style="margin-right:6px;"></i>O'quvchi To'lovlari</button>
+    <button class="tab-btn" onclick="switchTab('verification',this)">
+      <i class="fa-solid fa-clock-rotate-left" style="margin-right:6px;"></i>
+      Kutilayotganlar
+      {% if pending_payments_count %}
+      <span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;">{{ pending_payments_count }}</span>
+      {% endif %}
+    </button>
     <button class="tab-btn" onclick="switchTab('salary',this)"><i class="fa-solid fa-money-bill-transfer" style="margin-right:6px;"></i>Oylik Maoshlar</button>
   </div>
 
-  <!-- ── TAB: STUDENTS ── -->
-  <div id="section-students" class="section active">
+  <!-- ── TAB: VERIFICATION ── -->
+  <div id="section-verification" class="section">
+    <div class="card" style="padding:24px;">
+      <h3 style="color:#fff;font-weight:700;margin-bottom:18px;">Tasdiqlanishi kutilayotgan to'lovlar</h3>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+          <thead>
+            <tr style="border-bottom:1px solid #374151;color:#6b7280;">
+              <th style="text-align:left;padding:12px;font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:0.06em;">Sana</th>
+              <th style="text-align:left;padding:12px;font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:0.06em;">Talaba</th>
+              <th style="text-align:left;padding:12px;font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:0.06em;">Kurs / Guruh</th>
+              <th style="text-align:right;padding:12px;font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:0.06em;">Summa</th>
+              <th style="text-align:center;padding:12px;font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:0.06em;">Amal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pending_payments %}
+            <tr style="border-bottom:1px solid #1f2937;">
+              <td style="padding:12px;color:#9ca3af;">{{ p.paid_at|date:"d.m.Y H:i" }}</td>
+              <td style="padding:12px;">
+                <p style="color:#e2e8f0;font-weight:600;margin:0;">{{ p.enrollment.student.get_full_name|default:p.enrollment.student.username }}</p>
+                <p style="color:#4b5563;font-size:.72rem;margin:0;">{{ p.enrollment.student.email }}</p>
+              </td>
+              <td style="padding:12px;">
+                <p style="color:#e2e8f0;margin:0;">{{ p.enrollment.group.course.title }}</p>
+                <p style="color:#00e699;font-size:.72rem;font-weight:700;margin:0;">{{ p.enrollment.group.name }}</p>
+              </td>
+              <td style="padding:12px;text-align:right;color:#00e699;font-weight:700;">{{ p.amount|intcomma }} UZS</td>
+              <td style="padding:12px;text-align:center;">
+                <div style="display:flex;justify-content:center;gap:8px;">
+                  <a href="{% url 'payments:approve' p.id %}" style="background:#065f46;color:#6ee7b7;padding:5px 12px;border-radius:8px;font-weight:700;font-size:.72rem;border:1px solid #064e3b;">Tasdiqlash</a>
+                  <a href="{% url 'payments:reject' p.id %}" style="background:#450a0a;color:#f87171;padding:5px 12px;border-radius:8px;font-weight:700;font-size:.72rem;border:1px solid #7f1d1d;" onclick="return confirm('To\'lovni bekor qilasizmi?')">Rad etish</a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center;color:#4b5563;padding:40px;font-style:italic;">Kutilayotgan to'lovlar mavjud emas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>  <div id="section-students" class="section active">
     <div class="card" style="padding:24px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
         <h3 style="color:#fff;font-weight:700;">O'quvchilar va To'lov Holati</h3>

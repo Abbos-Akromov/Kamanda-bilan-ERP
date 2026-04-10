@@ -44,6 +44,10 @@ def payments_dashboard(request):
     # Salary payments sent
     salary_payments = Payment.objects.filter(method='salary_transfer').select_related('enrollment').order_by('-paid_at')[:20]
 
+    # Pending verification
+    pending_payments = Payment.objects.filter(status='pending').select_related('enrollment__student', 'enrollment__group__course').order_by('-paid_at')
+    pending_payments_count = pending_payments.count()
+
     return render(request, 'payments/dashboard.html', {
         'enrollments': enrollments,
         'total_collected': total_collected,
@@ -53,6 +57,8 @@ def payments_dashboard(request):
         'salary_payments': salary_payments,
         'center_balance': center_balance,
         'total_paid': total_salaries_paid,
+        'pending_payments': pending_payments,
+        'pending_payments_count': pending_payments_count,
     })
 
 
@@ -229,34 +235,84 @@ def student_make_payment(request):
             return redirect('dashboard:student')
 
         enr = get_object_or_404(Enrollment, id=enrollment_id, student=request.user)
-        course_price = enr.group.course.price
 
-        # Simulate online payment (in real project: Click/Payme API)
-        enr.amount_paid = Decimal(str(enr.amount_paid)) + amount
-        enr.save()
-
+        # Create payment record as PENDING
         Payment.objects.create(
             enrollment=enr,
             amount=amount,
             method='online',
-            transaction_id=str(uuid.uuid4()),
-            status='success'
+            transaction_id=f"STU-{uuid.uuid4().hex[:8]}",
+            status='pending'
         )
 
-        debt = enr.remaining_debt
-        if debt <= 0:
-            if debt < 0:
-                msg_body = f"{enr.group.course.title} uchun to'lov qabul qilindi. Sizda {float(abs(debt)):,.0f} UZS haqdorlik (ortiqcha to'lov) mavjud."
-                title = "Haqdorlik balansi ✅"
-            else:
-                msg_body = f"{enr.group.course.title} kursi uchun to'lovni to'liq amalga oshirdingiz. Tabriklaymiz!"
-                title = "To'lov muvaffaqiyatli ✅"
-        else:
-            msg_body = f"To'lovingiz qabul qilindi. Kurs uchun qolgan qarz: {float(debt):,.0f} UZS."
-            title = "Qisman to'lov amalga oshirildi"
-
-        send_notification(request.user, title, msg_body)
-        messages.success(request, f"{float(amount):,.0f} UZS to'lov muvaffaqiyatli amalga oshirildi!")
+        messages.success(request, f"{float(amount):,.0f} UZS to'lov yuborildi. Admin tasdiqlashini kuting.")
         return redirect('dashboard:student')
 
     return redirect('dashboard:student')
+
+@login_required
+@role_required('admin')
+def approve_payment(request, payment_id):
+    payment = get_object_or_404(Payment, id=payment_id, status='pending')
+    enr = payment.enrollment
+    group = enr.group
+    amount = payment.amount
+    
+    # 1. Update Enrollment balance
+    enr.amount_paid = Decimal(str(enr.amount_paid)) + amount
+    enr.save()
+    
+    # 2. Mark payment as SUCCESS
+    payment.status = 'success'
+    payment.save()
+    
+    # 3. Handle Salary distribution
+    teacher_pct = group.teacher_percent
+    assistant_pct = group.assistant_percent
+    
+    teacher_share = (amount * Decimal(teacher_pct)) / Decimal(100)
+    assistant_share = (amount * Decimal(assistant_pct)) / Decimal(100) if group.assistant else Decimal('0')
+    
+    from apps.salary.models import Salary
+    from django.utils import timezone
+    today = timezone.now().date().replace(day=1)
+    
+    # Teacher salary update
+    t_sal, _ = Salary.objects.get_or_create(
+        user=group.teacher, month=today,
+        defaults={'students_count': 0, 'percent': teacher_pct, 'base_amount': 0, 'total_amount': 0}
+    )
+    t_sal.total_amount = Decimal(str(t_sal.total_amount)) + teacher_share
+    t_sal.base_amount  = Decimal(str(t_sal.base_amount)) + teacher_share
+    t_sal.students_count = Enrollment.objects.filter(group__teacher=group.teacher, status='approved').count()
+    t_sal.save()
+    
+    # Assistant salary update
+    if group.assistant and assistant_share > 0:
+        a_sal, _ = Salary.objects.get_or_create(
+            user=group.assistant, month=today,
+            defaults={'students_count': 0, 'percent': assistant_pct, 'base_amount': 0, 'total_amount': 0}
+        )
+        a_sal.total_amount = Decimal(str(a_sal.total_amount)) + assistant_share
+        a_sal.base_amount  = Decimal(str(a_sal.base_amount)) + assistant_share
+        a_sal.students_count = Enrollment.objects.filter(group__assistant=group.assistant, status='approved').count()
+        a_sal.save()
+    
+    send_notification(enr.student, "To'lovingiz tasdiqlandi ✅", 
+                      f"{group.course.title} uchun yuborgan {float(amount):,.0f} UZS to'lovingiz admin tomonidan tasdiqlandi.")
+    
+    messages.success(request, f"{enr.student.username} to'lovi tasdiqlandi.")
+    return redirect('payments:dashboard')
+
+@login_required
+@role_required('admin')
+def reject_payment(request, payment_id):
+    payment = get_object_or_404(Payment, id=payment_id, status='pending')
+    payment.status = 'failed'
+    payment.save()
+    
+    send_notification(payment.enrollment.student, "To'lov rad etildi ❌", 
+                      f"Afsuski, {float(payment.amount):,.0f} UZS miqdoridagi to'lovingiz bekor qilindi.")
+    
+    messages.warning(request, "To'lov rad etildi.")
+    return redirect('payments:dashboard')

@@ -8,4 +8,6 @@ urlpatterns = [
     path('send-salary/', views.send_salary_payment, name='send_salary'),
     path('notify-debtors/', views.notify_debtors, name='notify_debtors'),
     path('student/pay/', views.student_make_payment, name='student_pay'),
+    path('approve/<int:payment_id>/', views.approve_payment, name='approve'),
+    path('reject/<int:payment_id>/', views.reject_payment, name='reject'),
 ]
