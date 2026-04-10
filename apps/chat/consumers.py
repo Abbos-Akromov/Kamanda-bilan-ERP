@@ -30,9 +30,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             
         user = self.scope['user']
         
+        # Convert empty strings to None
+        receiver_id = receiver_id if receiver_id else None
+        group_id = group_id if group_id else None
+        
         # Save to DB
         saved_msg = await self.save_message(user.id, message, receiver_id, group_id)
         
+        # Create notification for Direct Messages
+        if receiver_id and not group_id:
+            await self.create_chat_notification(user.id, receiver_id, message)
+            
         # Broadcast
         await self.channel_layer.group_send(self.room_group, {
             'type': 'chat_message',
@@ -61,8 +69,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.group_id = group_id
             msg.msg_type = 'group'
         elif receiver_id:
-            msg.receiver_id = receiver_id
+            try:
+                msg.receiver_id = int(receiver_id)
+            except (ValueError, TypeError):
+                msg.receiver_id = None
             msg.msg_type = 'direct'
         
         msg.save()
         return msg
+
+    @database_sync_to_async
+    def create_chat_notification(self, sender_id, receiver_id, content):
+        from apps.notifications.models import Notification
+        from apps.accounts.models import User
+        
+        sender = User.objects.get(id=sender_id)
+        Notification.objects.create(
+            user_id=receiver_id,
+            title=f"Yangi xabar: {sender.get_full_name() or sender.username}",
+            body=content[:100] + ('...' if len(content) > 100 else ''),
+            notif_type='chat_message',
+            link=f"/chat/user/{sender_id}/"
+        )

@@ -56,4 +56,9 @@ def mark_notification_read(request, pk):
     notif = get_object_or_404(Notification, id=pk, user=request.user)
     notif.is_read = True
     notif.save()
-    return redirect(request.META.get('HTTP_REFERER', 'dashboard:student'))
+    
+    # If the notification has a link (e.g., to a chat room), redirect there
+    if notif.link:
+        return redirect(notif.link)
+        
+    return redirect(request.META.get('HTTP_REFERER', '/'))

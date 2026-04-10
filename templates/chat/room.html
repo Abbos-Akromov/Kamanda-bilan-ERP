@@ -168,7 +168,7 @@
                                 <button type="button" class="w-8 h-8 text-gray-500 hover:text-white transition"><i class="fa-regular fa-face-smile"></i></button>
                             </div>
                         </div>
-                        <button type="submit" class="w-12 h-12 rounded-2xl bg-mint text-green-900 flex items-center justify-center shadow-[0_4px_15px_rgba(0,230,153,0.3)] hover:scale-105 transition active:scale-95">
+                        <button type="submit" id="msg-send-btn" class="w-12 h-12 rounded-2xl bg-mint text-green-900 flex items-center justify-center shadow-[0_4px_15px_rgba(0,230,153,0.3)] hover:scale-105 transition active:scale-95">
                             <i class="fa-solid fa-paper-plane"></i>
                         </button>
                     </form>
@@ -198,30 +198,53 @@
         {% endif %}
 
         if (roomName) {
-            const chatSocket = new WebSocket(
-                (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 
-                window.location.host + '/ws/chat/' + roomName + '/'
-            );
+            console.log("Connecting to WebSocket room:", roomName);
+            const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 
+                         window.location.host + '/ws/chat/' + roomName + '/';
+            
+            let chatSocket = new WebSocket(wsUrl);
 
-            chatSocket.onmessage = function(e) {
-                const data = json_parse(e.data);
-                if (data.message) appendMessage(data);
-            };
+            function connect() {
+                chatSocket.onmessage = function(e) {
+                    const data = json_parse(e.data);
+                    if (data.message) appendMessage(data);
+                };
 
-            chatSocket.onclose = function(e) { console.error('Chat socket closed'); };
+                chatSocket.onclose = function(e) {
+                    console.error('Chat socket closed unexpectedly. Reconnecting in 2s...');
+                    setTimeout(function() {
+                        chatSocket = new WebSocket(wsUrl);
+                        connect();
+                    }, 2000);
+                };
+
+                chatSocket.onopen = function(e) {
+                    console.log("WebSocket connection established!");
+                };
+
+                chatSocket.onerror = function(e) {
+                    console.error("WebSocket error observed:", e);
+                };
+            }
+
+            connect();
 
             if (chatForm) {
                 chatForm.onsubmit = function(e) {
                     e.preventDefault();
                     const msg = messageInput.value.trim();
-                    if (msg && chatSocket.readyState === WebSocket.OPEN) {
+                    if (!msg) return;
+
+                    if (chatSocket.readyState === WebSocket.OPEN) {
                         chatSocket.send(JSON.stringify({
                             'message': msg,
-                            'receiver_id': receiverId,
-                            'group_id': groupId
+                            'receiver_id': receiverId || null,
+                            'group_id': groupId || null
                         }));
                         messageInput.value = '';
                         messageInput.style.height = 'auto';
+                    } else {
+                        alert("Xabar yuborib bo'lmadi. Tarmoq bilan ulanishni tekshiring (WebSocket is not open).");
                     }
                 };
             }

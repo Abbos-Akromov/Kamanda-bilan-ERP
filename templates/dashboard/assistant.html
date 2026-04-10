@@ -36,6 +36,7 @@
 
     <!-- User Profile right -->
     <div class="hidden md:flex items-center space-x-4">
+      {% include 'dashboard/includes/notification_dropdown.html' %}
       <div class="flex items-center space-x-3 bg-transparent pr-2 rounded-full cursor-pointer">
         <div class="bg-purple-100 w-9 h-9 rounded-full flex items-center justify-center font-bold text-purple-800 text-sm">
           {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|default:''|upper }}
