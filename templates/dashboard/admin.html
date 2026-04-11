@@ -54,8 +54,9 @@
       </div>
     </div>
 
-    <!-- Add user button + profile -->
+    <!-- Notification + Add user button + profile -->
     <div class="hidden md:flex items-center gap-3">
+      {% include 'dashboard/includes/notification_dropdown.html' %}
       <button onclick="document.getElementById('userModal').classList.add('show')" class="border border-gray-600 text-gray-200 hover:text-white hover:border-gray-400 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer flex items-center shadow-sm">
         + Foydalanuvchi qo'shish
       </button>
@@ -104,9 +105,13 @@
           <i class="fa-solid fa-award"></i>
           <span>Sertifikatlar</span>
         </a>
-        <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+        <a href="{% url 'notifications:admin_dashboard' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-bell"></i>
           <span>Xabarnomalar</span>
+        </a>
+        <a href="{% url 'chat:list' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+          <i class="fa-regular fa-comments"></i>
+          <span>Messenger</span>
         </a>
         
         <a href="{% url 'auth:logout' %}" class="flex items-center space-x-3 text-red-400 hover:text-red-300 hover:bg-[#252830] px-4 py-3 rounded-lg font-medium mt-12 transition">
@@ -203,7 +208,7 @@
             <div class="card-bg p-6 rounded-2xl border border-gray-700 shadow-lg">
               <h3 class="font-bold text-lg mb-6 text-white tracking-wide">Tezkor amallar</h3>
               <div class="space-y-3">
-                 <a href="#" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
+                 <a href="{% url 'notifications:admin_dashboard' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
                    <i class="fa-regular fa-bell opacity-70 w-5 text-center"></i> <span>Xabarnoma yuborish</span>
                  </a>
                  <a href="{% url 'certificates:issue' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
@@ -212,7 +217,7 @@
                  <a href="{% url 'salary:list' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
                    <i class="fa-solid fa-download opacity-70 w-5 text-center"></i> <span>Maosh eksport</span>
                  </a>
-                 <a href="#" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
+                 <a href="{% url 'payments:dashboard' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
                    <i class="fa-solid fa-dollar-sign opacity-70 w-5 text-center"></i> <span>To'lov tekshirish</span>
                  </a>
               </div>
@@ -277,15 +282,15 @@
                            {% if u.is_active %}
                              {% if u.role == 'student' %}
                                {% if u.has_approved_group %}
-                                 <span class="text-mint"><i class="fa-solid fa-check-circle"></i> Faol</span>
+                                 <span class="text-mint font-bold"><i class="fa-solid fa-check-circle"></i> Faol</span>
                                {% else %}
-                                 <span class="text-yellow-500 font-bold bg-yellow-900/20 px-2 py-0.5 rounded border border-yellow-700/50"><i class="fa-solid fa-triangle-exclamation"></i> Guruhsiz</span>
+                                 <span class="text-red-400 font-bold bg-red-900/20 px-2 py-0.5 rounded border border-red-500/30"><i class="fa-solid fa-triangle-exclamation"></i> Noaktiv</span>
                                {% endif %}
                              {% else %}
-                               <span class="text-mint"><i class="fa-solid fa-check"></i> Faol</span>
+                               <span class="text-mint font-bold"><i class="fa-solid fa-check"></i> Faol</span>
                              {% endif %}
                            {% else %}
-                             <span class="text-red-400">Bloklangan</span>
+                             <span class="text-red-400 font-bold">Bloklangan</span>
                            {% endif %}
                         </td>
                         <td class="py-4 px-4 text-right text-sm text-gray-400">{{ u.date_joined|date:"d.m.Y" }}</td>
@@ -461,14 +466,21 @@
                 <div>
                     <label class="block text-gray-300 text-sm font-medium mb-1.5">Haftalik Jadval</label>
                     <select name="schedule_type" required class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-mint transition">
-                        <option value="3_days">Haftada 3 kun (Du-Cho-Ju)</option>
+                        <option value="3_days_toq">Haftada 3 kun (Toq kunlar: Du-Cho-Ju)</option>
+                        <option value="3_days_juft">Haftada 3 kun (Juft kunlar: Se-Pay-Sha)</option>
                         <option value="5_days">Haftada 5 kun (Du-Ju)</option>
-                        <option value="daily">Har kuni (Du-Sha)</option>
+                        <option value="daily">Har kuni (Du-Ya)</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-gray-300 text-sm font-medium mb-1.5">Dars Vaqti</label>
-                    <input type="time" name="lesson_start_time" required value="10:00" class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-mint transition">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-gray-300 text-[10px] font-bold uppercase mb-1">Boshlanish</label>
+                        <input type="time" name="lesson_start_time" required value="10:00" class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-2 py-2 focus:outline-none focus:border-mint transition text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 text-[10px] font-bold uppercase mb-1">Tugash</label>
+                        <input type="time" name="lesson_end_time" required value="11:30" class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-2 py-2 focus:outline-none focus:border-mint transition text-sm">
+                    </div>
                 </div>
               </div>
               
@@ -832,10 +844,6 @@
                       <option value="{{ g.id }}">{{ g.name }} ({{ g.course.title }})</option>
                       {% endfor %}
                   </select>
-              </div>
-
-              <div class="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl mb-6 text-xs text-blue-200 leading-relaxed">
-                  <i class="fa-solid fa-envelope mr-1 text-blue-400"></i> O'quvchiga guruhga qo'shilgani va to'lov qilishi haqida avtomatik email va bildirishnoma yuboriladi.
               </div>
               
               <button type="submit" class="w-full bg-mint text-green-900 font-extrabold py-3.5 rounded-xl hover:bg-[#00cc88] transition shadow-lg uppercase tracking-widest text-sm">

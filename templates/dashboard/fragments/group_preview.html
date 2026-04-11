@@ -35,18 +35,107 @@
 
   <!-- Stats -->
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+  <!-- Stats -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
     <div style="background:#252830;border:1px solid #374151;border-radius:9px;padding:10px 14px;flex:1;min-width:110px;">
       <p style="color:#9ca3af;font-size:.62rem;text-transform:uppercase;margin:0 0 4px 0;font-weight:700;">Kurs narxi</p>
       <p style="color:#00e699;font-weight:800;font-size:.95rem;margin:0;">{{ group.course.price|floatformat:0 }} <span style="font-size:.62rem;color:#6b7280;">UZS</span></p>
     </div>
     <div style="background:#252830;border:1px solid #374151;border-radius:9px;padding:10px 14px;flex:1;min-width:100px;">
-      <p style="color:#9ca3af;font-size:.62rem;text-transform:uppercase;margin:0 0 4px 0;font-weight:700;">Boshlanish</p>
-      <p style="color:#e2e8f0;font-weight:700;font-size:.88rem;margin:0;">{{ group.start_date|date:"d.m.Y" }}</p>
+      <p style="color:#9ca3af;font-size:.62rem;text-transform:uppercase;margin:0 0 4px 0;font-weight:700;">Dars vaqti</p>
+      <p style="color:#e2e8f0;font-weight:700;font-size:.88rem;margin:0;">{{ group.lesson_start_time|time:"H:i" }} - {{ group.lesson_end_time|time:"H:i" }}</p>
     </div>
     <div style="background:#252830;border:1px solid #374151;border-radius:9px;padding:10px 14px;flex:1;min-width:100px;">
-      <p style="color:#9ca3af;font-size:.62rem;text-transform:uppercase;margin:0 0 4px 0;font-weight:700;">Tugash</p>
-      <p style="color:#e2e8f0;font-weight:700;font-size:.88rem;margin:0;">{{ group.end_date|date:"d.m.Y" }}</p>
+      <p style="color:#9ca3af;font-size:.62rem;text-transform:uppercase;margin:0 0 4px 0;font-weight:700;">Bosh/Tugash</p>
+      <p style="color:#e2e8f0;font-weight:700;font-size:.8rem;margin:0;">{{ group.start_date|date:"d.m" }} / {{ group.end_date|date:"d.m" }}</p>
     </div>
+  </div>
+
+  <!-- ══ GROUP MANAGEMENT BUTTONS (ADMIN ONLY) ══ -->
+  {% if user.role == 'admin' %}
+  <div style="display:flex;gap:8px;margin-bottom:18px;">
+    <button onclick="document.getElementById('editGroupForm').style.display='block'" style="flex:1;background:rgba(0,230,153,0.1);border:1px solid #00e699;color:#00e699;padding:8px;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;">
+      <i class="fa-solid fa-pen-to-square"></i> TAHRIRLASH
+    </button>
+    <form method="POST" action="/dashboard/group/{{ group.id }}/extend-schedule/" style="flex:1;">
+      {% csrf_token %}
+      <button type="submit" style="width:100%;background:rgba(167,139,250,0.1);border:1px solid #a78bfa;color:#a78bfa;padding:8px;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;">
+        <i class="fa-solid fa-plus"></i> 1 OY QO'SHISH
+      </button>
+    </form>
+    <form method="POST" action="/dashboard/group/{{ group.id }}/delete/" onsubmit="return confirm('Guruhni O\'CHIRASIZMI? Bu barcha dars va talabalarni ham o\'chiradi!')" style="flex:1;">
+      {% csrf_token %}
+      <button type="submit" style="width:100%;background:rgba(248,113,113,0.1);border:1px solid #f87171;color:#f87171;padding:8px;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;">
+        <i class="fa-solid fa-trash"></i> O'CHIRISH
+      </button>
+    </form>
+  </div>
+
+  <!-- Hidden Edit Group Form -->
+  <div id="editGroupForm" style="display:none;background:#252830;border:1px solid #374151;border-radius:12px;padding:16px;margin:10px 0 20px 0;border-left:4px solid #00e699;">
+    <form method="POST" action="/dashboard/group/{{ group.id }}/update/">
+      {% csrf_token %}
+      <p style="color:#fff;font-weight:700;font-size:0.85rem;margin-bottom:12px;">Guruh Ma'lumotlarini Yangilash</p>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;color:#9ca3af;font-size:.65rem;text-transform:uppercase;margin-bottom:5px;font-weight:700;">Guruh Nomi</label>
+          <input type="text" name="name" value="{{ group.name }}" style="width:100%;background:#0d0f14;border:1px solid #374151;color:#fff;padding:8px;border-radius:6px;font-size:0.8rem;">
+        </div>
+        <div>
+          <label style="display:block;color:#9ca3af;font-size:.65rem;text-transform:uppercase;margin-bottom:5px;font-weight:700;">Holat</label>
+          <select name="is_active" style="width:100%;background:#0d0f14;border:1px solid #374151;color:#fff;padding:8px;border-radius:6px;font-size:0.8rem;">
+            <option value="1" {% if group.is_active %}selected{% endif %}>✓ Faol</option>
+            <option value="0" {% if not group.is_active %}selected{% endif %}>✗ Yopilgan</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;color:#9ca3af;font-size:.65rem;text-transform:uppercase;margin-bottom:5px;font-weight:700;">O'qituvchi</label>
+          <select name="teacher_id" style="width:100%;background:#0d0f14;border:1px solid #374151;color:#fff;padding:8px;border-radius:6px;font-size:0.8rem;">
+            {% for t in teachers_only %}
+            <option value="{{ t.id }}" {% if group.teacher_id == t.id %}selected{% endif %}>{{ t.get_full_name|default:t.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;color:#9ca3af;font-size:.65rem;text-transform:uppercase;margin-bottom:5px;font-weight:700;">Yordamchi</label>
+          <select name="assistant_id" style="width:100%;background:#0d0f14;border:1px solid #374151;color:#fff;padding:8px;border-radius:6px;font-size:0.8rem;">
+            <option value="">Biriktirilmagan</option>
+            {% for a in assistants_only %}
+            <option value="{{ a.id }}" {% if group.assistant_id == a.id %}selected{% endif %}>{{ a.get_full_name|default:a.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;color:#9ca3af;font-size:.65rem;text-transform:uppercase;margin-bottom:5px;font-weight:700;">Boshl. Vaqti</label>
+          <input type="time" name="lesson_start_time" value="{{ group.lesson_start_time|time:'H:i' }}" style="width:100%;background:#0d0f14;border:1px solid #374151;color:#fff;padding:8px;border-radius:6px;font-size:0.8rem;">
+        </div>
+        <div>
+          <label style="display:block;color:#9ca3af;font-size:.65rem;text-transform:uppercase;margin-bottom:5px;font-weight:700;">Tugash Vaqti</label>
+          <input type="time" name="lesson_end_time" value="{{ group.lesson_end_time|time:'H:i' }}" style="width:100%;background:#0d0f14;border:1px solid #374151;color:#fff;padding:8px;border-radius:6px;font-size:0.8rem;">
+        </div>
+      </div>
+
+      <div style="margin-bottom:15px;">
+        <label style="display:block;color:#9ca3af;font-size:.65rem;text-transform:uppercase;margin-bottom:5px;font-weight:700;">Haftalik Jadval</label>
+        <select name="schedule_type" style="width:100%;background:#0d0f14;border:1px solid #374151;color:#fff;padding:8px;border-radius:6px;font-size:0.8rem;">
+          {% for val, label in SCHEDULE_TYPES %}
+          <option value="{{ val }}" {% if group.schedule_type == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:flex;gap:6px;">
+        <button type="submit" style="flex:1;background:#00e699;color:#064e3b;border:none;padding:10px;border-radius:8px;font-weight:800;font-size:0.8rem;cursor:pointer;">SAQLASH</button>
+        <button type="button" onclick="document.getElementById('editGroupForm').style.display='none'" style="background:#374151;color:#fff;border:none;padding:10px 15px;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;">BEKOR</button>
+      </div>
+    </form>
   </div>
 
   <!-- Divider -->
@@ -71,7 +160,7 @@
   <!-- Divider -->
   <div style="height:1px;background:#374151;margin-bottom:16px;"></div>
 
-  <!-- ══ FOIZ BOSHQARUVI ══ -->
+  <!-- ══ FOIZ BOSHQARUVI (ADMIN ONLY) ══ -->
   <div style="background:#0f1f15;border:1px solid #064e3b;border-radius:12px;padding:16px;margin-bottom:18px;">
     <p style="color:#6ee7b7;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px 0;"><i class="fa-solid fa-percent" style="margin-right:5px;"></i>Oylik Ulush Foizlarini Boshqarish</p>
     {% with center_pct=100|add:group.teacher_percent|add:group.assistant_percent %}
@@ -116,6 +205,8 @@
         <i class="fa-solid fa-save" style="margin-right:6px;"></i> Foizlarni Saqlash
       </button>
     </form>
+  </div>
+  {% endif %}
     <script>
     function recalcCenter(gid) {
       var t = parseFloat(document.getElementById('tp-'+gid).value)||0;
@@ -179,8 +270,102 @@
       </tbody>
     </table>
   </div>
-  {% else %}
-  <p style="color:#4b5563;text-align:center;padding:20px 0;font-style:italic;">Bu guruhda hali o'quvchilar yo'q.</p>
   {% endif %}
 
+  <!-- ══ DARS JADVALI (SCHEDULE) ══ -->
+  <div style="height:1px;background:#374151;margin:20px 0 16px 0;"></div>
+  <p style="color:#6ee7b7;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px 0;"><i class="fa-solid fa-calendar-days" style="margin-right:5px;"></i>Avtomatik Yaratilgan Dars Jadvali (1 Oylik)</p>
+  
+  <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:20px;">
+    {% for lesson in lessons %}
+    <div style="background:#252830;border:1px solid #374151;border-radius:12px;padding:12px;position:relative;overflow:hidden;transition:all .2s;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#0d0f14;display:flex;align-items:center;justify-content:center;color:#00e699;font-weight:800;font-size:.75rem;border:1px solid #374151;">
+            {{ lesson.order }}
+          </div>
+          <div>
+            <p style="color:#fff;font-weight:700;font-size:.85rem;margin:0;">{{ lesson.title }}</p>
+            <p style="color:#6b7280;font-size:.7rem;margin:0;">{{ lesson.date|date:"d.m.Y" }} ({{ lesson.date|date:"l"|capfirst }})</p>
+          </div>
+        </div>
+        {% if user.role == 'admin' %}
+        <button onclick="toggleLessonEdit({{ lesson.id }})" style="background:transparent;border:1px solid #4b5563;color:#9ca3af;padding:4px 10px;border-radius:6px;font-size:.65rem;font-weight:700;cursor:pointer;">
+          <i class="fa-solid fa-pencil"></i> O'ZGARTIRISH
+        </button>
+        {% endif %}
+      </div>
+
+      <!-- Fors-major Update Form -->
+      {% if user.role == 'admin' %}
+      <form id="edit-lesson-{{ lesson.id }}" onsubmit="submitLessonEdit(event, {{ lesson.id }}, '{% url 'dashboard:update_lesson' lesson.id %}')" 
+            style="display:none;background:#0d0f14;padding:12px;border-radius:10px;margin-top:10px;border:1px solid #064e3b;">
+        {% csrf_token %}
+        <p style="color:#f87171;font-size:.6rem;font-weight:800;text-transform:uppercase;margin-bottom:10px;">Fors-major holati uchun tahrirlash</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="display:block;color:#6b7280;font-size:.6rem;text-transform:uppercase;margin-bottom:4px;font-weight:700;">Yangi sana</label>
+            <input type="date" name="date" value="{{ lesson.date|date:'Y-m-d' }}" style="width:100%;background:#1d1f27;border:1px solid #374151;color:#fff;padding:6px;border-radius:6px;font-size:.75rem;outline:none;">
+          </div>
+          <div>
+            <label style="display:block;color:#6b7280;font-size:.6rem;text-transform:uppercase;margin-bottom:4px;font-weight:700;">Dars mavzusi</label>
+            <input type="text" name="title" value="{{ lesson.title }}" style="width:100%;background:#1d1f27;border:1px solid #374151;color:#fff;padding:6px;border-radius:6px;font-size:.75rem;outline:none;">
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button type="submit" style="flex:1;background:#065f46;color:#fff;border:none;padding:7px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;">SAQLASH</button>
+          <button type="button" onclick="toggleLessonEdit({{ lesson.id }})" style="background:#374151;color:#fff;border:none;padding:7px 12px;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;">BEKOR QILISH</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+    {% empty %}
+    <p style="color:#6b7280;text-align:center;font-style:italic;font-size:.8rem;padding:10px;">Hali darslar shakllantirilmagan.</p>
+    {% endfor %}
+  </div>
+
+  <script>
+    function toggleLessonEdit(id) {
+      var f = document.getElementById('edit-lesson-' + id);
+      if (f) {
+        f.style.display = (f.style.display === 'none' || f.style.display === '') ? 'block' : 'none';
+      }
+    }
+
+    async function submitLessonEdit(event, lessonId, url) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      const submitBtn = form.querySelector('button[type="submit"]');
+      
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'SAQLANMOQDA...';
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+          }
+        });
+
+        if (response.ok) {
+          // Refresh the entire group preview modal to show changes
+          const groupUrl = '/dashboard/preview/group/{{ group.id }}/';
+          const title = '{{ group.name }} — {{ group.course.title }}';
+          showPreview(groupUrl, title);
+        } else {
+          alert('Xatolik yuz berdi. Iltimos qaytadan urunib ko\'ring.');
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'SAQLASH';
+        }
+      } catch (error) {
+        console.error('Update Error:', error);
+        alert('Tarmoq xatosi yoki server bilan bog\'lanib bo\'lmadi.');
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'SAQLASH';
+      }
+    }
+  </script>
 </div>

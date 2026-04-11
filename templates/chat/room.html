@@ -25,7 +25,7 @@
     <!-- Top Navigation -->
     <nav class="glass border-b border-white/5 p-4 shrink-0 flex items-center justify-between z-10">
         <div class="flex items-center space-x-4">
-            <a href="{% url 'dashboard:admin' %}" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition group border border-white/5">
+            <a href="{% if user.role == 'admin' %}{% url 'dashboard:admin' %}{% elif user.role == 'teacher' %}{% url 'dashboard:teacher' %}{% elif user.role == 'assistant' %}{% url 'dashboard:assistant' %}{% else %}{% url 'dashboard:student' %}{% endif %}" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition group border border-white/5">
                 <i class="fa-solid fa-chevron-left group-hover:-translate-x-0.5 transition"></i>
             </a>
             <div class="flex flex-col">
@@ -64,7 +64,7 @@
                     <h3 class="text-gray-500 text-[10px] font-bold tracking-widest uppercase mb-3 px-3">Guruhlar</h3>
                     <div class="space-y-1">
                         {% for g in groups %}
-                        <a href="{% url 'chat:group' g.id %}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'group' and chat_group.id == g.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
+                        <a href="{% url 'chat:group' g.id %}" data-search="{{ g.name }} {{ g.course.title }}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'group' and chat_group.id == g.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
                             <div class="w-10 h-10 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center text-mint font-bold">
                                 #
                             </div>
@@ -85,7 +85,7 @@
                     <h3 class="text-gray-500 text-[10px] font-bold tracking-widest uppercase mb-3 px-3">Kontaktlar</h3>
                     <div class="space-y-1">
                         {% for c in contacts %}
-                        <a href="{% url 'chat:direct' c.id %}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'direct' and chat_partner.id == c.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
+                        <a href="{% url 'chat:direct' c.id %}" data-search="{{ c.get_full_name|default:c.username }} {{ c.role }}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'direct' and chat_partner.id == c.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
                             <div class="relative">
                                 <div class="w-10 h-10 rounded-full bg-gray-800 border border-white/5 flex items-center justify-center font-bold text-gray-400">
                                     {{ c.username|first|upper }}
@@ -134,8 +134,7 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button class="w-9 h-9 rounded-lg hover:bg-white/5 text-gray-400 transition flex items-center justify-center"><i class="fa-solid fa-phone"></i></button>
-                        <button class="w-9 h-9 rounded-lg hover:bg-white/5 text-gray-400 transition flex items-center justify-center"><i class="fa-solid fa-video"></i></button>
+                        <span class="text-[10px] text-gray-500 font-bold uppercase mr-2 hidden md:block">Xavfsiz ulanish <i class="fa-solid fa-lock ml-1 opacity-50"></i></span>
                         <button class="w-9 h-9 rounded-lg hover:bg-white/5 text-mint transition flex items-center justify-center border border-mint/20"><i class="fa-solid fa-ellipsis-v"></i></button>
                     </div>
                 </div>
@@ -168,7 +167,7 @@
                                 <button type="button" class="w-8 h-8 text-gray-500 hover:text-white transition"><i class="fa-regular fa-face-smile"></i></button>
                             </div>
                         </div>
-                        <button type="submit" class="w-12 h-12 rounded-2xl bg-mint text-green-900 flex items-center justify-center shadow-[0_4px_15px_rgba(0,230,153,0.3)] hover:scale-105 transition active:scale-95">
+                        <button type="submit" id="msg-send-btn" class="w-12 h-12 rounded-2xl bg-mint text-green-900 flex items-center justify-center shadow-[0_4px_15px_rgba(0,230,153,0.3)] hover:scale-105 transition active:scale-95">
                             <i class="fa-solid fa-paper-plane"></i>
                         </button>
                     </form>
@@ -179,18 +178,118 @@
 
     <script>
         const chatLog = document.getElementById('chat-log');
-        if (chatLog) chatLog.scrollTop = chatLog.scrollHeight;
+        const messageInput = document.getElementById('msg-input');
+        const chatForm = messageInput ? messageInput.closest('form') : null;
 
-        const input = document.getElementById('msg-input');
-        if (input) {
-            input.addEventListener('input', function() {
+        // Determine room name
+        {% if mode == 'group' %}
+            const roomName = "group_{{ chat_group.id }}";
+            const groupId = "{{ chat_group.id }}";
+            const receiverId = null;
+        {% elif mode == 'direct' %}
+            {% with me=user.id other=chat_partner.id %}
+                const roomName = "direct_{% if me < other %}{{ me }}_{{ other }}{% else %}{{ other }}_{{ me }}{% endif %}";
+            {% endwith %}
+            const groupId = null;
+            const receiverId = "{{ chat_partner.id }}";
+        {% else %}
+            const roomName = null;
+        {% endif %}
+
+        if (roomName) {
+            console.log("Connecting to WebSocket room:", roomName);
+            const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 
+                         window.location.host + '/ws/chat/' + roomName + '/';
+            
+            let chatSocket = new WebSocket(wsUrl);
+
+            function connect() {
+                chatSocket.onmessage = function(e) {
+                    const data = json_parse(e.data);
+                    if (data.message) appendMessage(data);
+                };
+
+                chatSocket.onclose = function(e) {
+                    console.error('Chat socket closed unexpectedly. Reconnecting in 2s...');
+                    setTimeout(function() {
+                        chatSocket = new WebSocket(wsUrl);
+                        connect();
+                    }, 2000);
+                };
+
+                chatSocket.onopen = function(e) {
+                    console.log("WebSocket connection established!");
+                };
+
+                chatSocket.onerror = function(e) {
+                    console.error("WebSocket error observed:", e);
+                };
+            }
+
+            connect();
+
+            if (chatForm) {
+                chatForm.onsubmit = function(e) {
+                    e.preventDefault();
+                    const msg = messageInput.value.trim();
+                    if (!msg) return;
+
+                    if (chatSocket.readyState === WebSocket.OPEN) {
+                        chatSocket.send(JSON.stringify({
+                            'message': msg,
+                            'receiver_id': receiverId || null,
+                            'group_id': groupId || null
+                        }));
+                        messageInput.value = '';
+                        messageInput.style.height = 'auto';
+                    } else {
+                        alert("Xabar yuborib bo'lmadi. Tarmoq bilan ulanishni tekshiring (WebSocket is not open).");
+                    }
+                };
+            }
+        }
+
+        function json_parse(str) { try { return JSON.parse(str); } catch(e) { return {}; } }
+
+        function appendMessage(data) {
+            const isMe = data.sender_id == "{{ user.id }}";
+            const div = document.createElement('div');
+            div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in`;
+            div.innerHTML = `
+                <div class="max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : ''}">
+                    ${!isMe ? `<span class="text-[10px] font-bold text-gray-500 mb-1 ml-2 uppercase">${data.sender_name}</span>` : ''}
+                    <div class="px-4 py-2.5 text-sm shadow-xl ${isMe ? 'chat-me' : 'chat-other'} font-medium">
+                        ${data.message}
+                    </div>
+                    <span class="message-time mt-1 mx-2">${data.created_at}</span>
+                </div>
+            `;
+            chatLog.appendChild(div);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        // Sidebar Search
+        const searchInput = document.querySelector('input[placeholder="Qidirish..."]');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                document.querySelectorAll('[data-search]').forEach(item => {
+                    const text = item.getAttribute('data-search').toLowerCase();
+                    item.style.display = text.includes(query) ? 'flex' : 'none';
+                });
+            });
+        }
+
+        if (chatLog) chatLog.scrollTop = chatLog.scrollHeight;
+        if (messageInput) {
+            messageInput.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
             });
-            input.addEventListener('keydown', function(e) {
+            messageInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    this.closest('form').submit();
+                    chatForm.dispatchEvent(new Event('submit'));
                 }
             });
         }

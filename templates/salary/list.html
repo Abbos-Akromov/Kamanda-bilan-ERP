@@ -6,221 +6,381 @@
   <title>Maoshlar tizimi - LMS Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #1a1c23; color: #e2e8f0; font-family: Inter, sans-serif; }
-    .card-bg { background-color: #252830; }
-    .badge-bg { background-color: #1a1c23; }
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+    
+    body { 
+      background-color: #0f1117; 
+      color: #e2e8f0; 
+      font-family: 'Outfit', sans-serif; 
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(0, 230, 153, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
+    }
+    
+    .glass-card { 
+      background: rgba(30, 32, 40, 0.6); 
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .card-bg { background-color: #1a1c23; border: 1px solid rgba(255, 255, 255, 0.05); }
     .text-mint { color: #00e699; }
     .bg-mint { background-color: #00e699; }
-    .bg-mint-soft { background-color: #e6fffa; color: #047857; }
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+    
+    .badge-role {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    
+    .btn-pay {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-pay:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    
+    .table-row-hover:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
   </style>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/inter-ui/3.19.3/inter.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col p-4 md:p-6">
 
-  <span class="text-gray-500 text-[10px] sm:text-xs font-bold tracking-widest pl-6 pt-3 uppercase opacity-60">Moliya / Maosh</span>
-  
-  <!-- Top Navigation -->
-  <nav class="border-b border-gray-700 p-4 shrink-0 flex items-center justify-between mt-1">
-    <div class="flex items-center space-x-2">
-      <span class="text-2xl font-bold"><span class="text-mint">LMS</span> <span class="text-white">Admin</span></span>
+  <!-- Header Section -->
+  <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-mint bg-mint/10 px-2 py-0.5 rounded-md">Moliya</span>
+        <span class="text-gray-600 text-[10px]">•</span>
+        <span class="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Maoshlar boshqaruvi</span>
+      </div>
+      <h1 class="text-3xl font-extrabold text-white tracking-tight">Oylik Maoshlar <span class="text-mint">Tizimi</span></h1>
     </div>
-    <div class="hidden md:flex items-center space-x-3">
-        <a href="{% url 'dashboard:admin' %}" class="bg-[#252830] text-gray-300 hover:text-white px-4 py-2 rounded-lg text-sm font-bold border border-gray-600 transition flex items-center">
-            <i class="fa-solid fa-arrow-left mr-2"></i> Orqaga qaytish
+    
+    <div class="flex items-center gap-3">
+        <a href="{% if user.role == 'admin' %}{% url 'dashboard:admin' %}{% elif user.role == 'teacher' %}{% url 'dashboard:teacher' %}{% else %}{% url 'dashboard:assistant' %}{% endif %}" class="glass-card hover:bg-white/5 text-gray-300 px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center shadow-lg">
+            <i class="fa-solid fa-arrow-left mr-2.5 text-xs opacity-60"></i> Dashbordga qaytish
         </a>
     </div>
-  </nav>
+  </header>
 
-    <div class="flex flex-1 overflow-hidden mt-6 px-4">
-    <!-- Left Sidebar Options (Simplified for Salary) -->
-    <aside class="w-64 shrink-0 border-r border-gray-700 pr-4 mr-6 hidden lg:block">
-      <nav class="space-y-1">
-        <a href="{% if user.role == 'admin' %}{% url 'dashboard:admin' %}{% else %}{% url 'dashboard:teacher' %}{% endif %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer form-btn">
-          <i class="fa-solid fa-shapes"></i>
-          <span>Boshqaruv</span>
-        </a>
-        <a href="#" class="flex items-center space-x-3 bg-mint-soft px-4 py-3 rounded-lg font-medium text-green-900 border border-green-200 mb-2 shadow-sm transition">
-          <i class="fa-solid fa-dollar-sign px-1 opacity-80"></i>
-          <span>Maoshlar tizimi</span>
-        </a>
-      </nav>
+  <div class="flex flex-1 gap-8 overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-72 shrink-0 hidden xl:flex flex-col gap-6">
+      <div class="glass-card p-6 rounded-3xl shadow-xl">
+        <h4 class="text-xs uppercase text-gray-500 font-black tracking-widest mb-5">Amallar</h4>
+        <nav class="space-y-2">
+          <a href="{% if user.role == 'admin' %}{% url 'dashboard:admin' %}{% elif user.role == 'teacher' %}{% url 'dashboard:teacher' %}{% else %}{% url 'dashboard:assistant' %}{% endif %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-white/5 px-4 py-3 rounded-2xl font-medium transition group">
+            <i class="fa-solid fa-shapes text-sm group-hover:text-mint transition"></i>
+            <span>Bosh sahifa</span>
+          </a>
+          <a href="#" class="flex items-center space-x-3 bg-mint text-gray-950 px-4 py-3 rounded-2xl font-bold shadow-lg shadow-mint/20">
+            <i class="fa-solid fa-wallet text-sm"></i>
+            <span>Maoshlar jadvali</span>
+          </a>
+        </nav>
+
+        {% if user.role == 'admin' %}
+        <div class="mt-8 pt-8 border-t border-white/5">
+           <h4 class="text-xs uppercase text-gray-500 font-black tracking-widest mb-5">Yangi hisoblash</h4>
+           <form action="{% url 'salary:calculate' %}" method="POST" class="space-y-4">
+               {% csrf_token %}
+               <div>
+                   <input type="month" name="month" value="{{ filtered_month|default:'' }}" required 
+                    class="w-full bg-[#0f1117] border border-white/10 text-white rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-mint transition appearance-none text-center cursor-pointer hover:bg-[#151820]"
+                    style="color-scheme: dark;">
+               </div>
+               <button type="submit" class="w-full bg-white text-gray-950 hover:bg-mint transition-all font-black text-[12px] uppercase tracking-wider py-4 rounded-2xl shadow-xl shadow-white/5 flex justify-center items-center active:scale-[0.98]">
+                   <i class="fa-solid fa-bolt mr-2 text-[10px]"></i> Hisoblashni boshlash
+               </button>
+           </form>
+        </div>
+        {% endif %}
+      </div>
       
-      {% if user.role == 'admin' %}
-      <div class="mt-8 border-t border-gray-700 pt-6">
-         <!-- Hisoblash form -->
-         <h4 class="text-xs uppercase text-gray-500 font-bold tracking-widest mb-4 px-2">Yangi hisoblash</h4>
-         <form action="{% url 'salary:calculate' %}" method="POST" class="bg-[#252830] p-4 rounded-xl border border-gray-700">
-             {% csrf_token %}
-             <div class="mb-4">
-                 <label class="block text-gray-400 text-[11px] uppercase tracking-wider mb-2 font-bold">Oyni tanlang</label>
-                 <input type="month" name="month" value="{{ filtered_month|default:'' }}" required class="w-full bg-[#1a1c23] border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-mint transition custom-calendar">
-             </div>
-             <button type="submit" class="w-full bg-mint-soft text-[#047857] hover:bg-green-100 font-bold text-sm py-2 rounded-lg transition border border-green-200 shadow-sm flex justify-center items-center">
-                 <i class="fa-solid fa-calculator mr-2"></i> Hisoblash
-             </button>
-         </form>
+      {% if user.role == 'admin' and latest_month %}
+      <!-- PDF Export Quick Card -->
+      <div class="glass-card p-6 rounded-3xl border-l-4 border-red-500/50 shadow-xl relative overflow-hidden group">
+        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-red-500 opacity-5 rounded-full blur-xl group-hover:opacity-10 transition-all"></div>
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center shadow-inner">
+            <i class="fa-solid fa-file-invoice-dollar text-red-500 text-lg"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-black text-white uppercase tracking-tight">PDF Hisobot</h4>
+            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{{ latest_month|date:"F Y" }}</p>
+          </div>
+        </div>
+        <a href="{% url 'salary:export_pdf' latest_month|date:'Y-m' %}" 
+           class="block w-full text-center bg-white/5 hover:bg-red-500 text-white hover:text-white text-[10px] font-black uppercase tracking-[0.2em] py-4 rounded-2xl border border-white/5 hover:border-red-500 transition-all shadow-lg active:scale-[0.98]">
+          Hisobotni yuklash
+        </a>
       </div>
       {% endif %}
     </aside>
 
-    <!-- Main Right Content -->
-    <main class="flex-1 overflow-y-auto pb-10 pr-2">
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col gap-8 overflow-hidden">
       
       {% if messages %}
-        <div class="mb-4">
+        <div class="space-y-2">
           {% for msg in messages %}
-             <div class="bg-gray-800 border border-green-500/50 text-white px-4 py-3 rounded-xl mb-2 text-sm shadow">
-                <i class="fa-solid fa-circle-check mr-2 text-mint"></i> {{ msg }}
+             <div class="glass-card border-l-4 border-mint text-white px-5 py-4 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+                <div class="w-8 h-8 rounded-full bg-mint/20 flex items-center justify-center shrink-0">
+                  <i class="fa-solid fa-check text-mint text-xs"></i>
+                </div>
+                <p class="text-sm font-medium">{{ msg }}</p>
              </div>
           {% endfor %}
         </div>
       {% endif %}
 
       {% if user.role == 'admin' %}
-      <!-- Top Dashboard row (Global) -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="card-bg p-6 rounded-2xl border border-gray-700 shadow-lg relative overflow-hidden">
-             <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-500 opacity-10 rounded-full"></div>
-             <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Jami Tushum</p>
-             <h2 class="text-2xl font-bold text-white tracking-tight">{{ gross_total|intcomma }} <span class="text-mint text-xs">UZS</span></h2>
-             <p class="text-[10px] text-gray-500 mt-2 font-medium">Barcha muvaffaqiyatli to'lovlar</p>
+      <!-- Stats Summary (Admin) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="glass-card p-7 rounded-[2.5rem] shadow-2xl relative group hover:border-white/10 transition-all">
+             <div class="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Jami Tushum</div>
+             <div class="flex items-end gap-2">
+               <h2 class="text-3xl font-black text-white leading-none">{{ gross_total|intcomma }}</h2>
+               <span class="text-mint text-xs font-bold mb-1">UZS</span>
+             </div>
+             <div class="mt-6 flex items-center gap-2 text-[10px] font-bold text-gray-500">
+                <i class="fa-solid fa-arrow-up-right-dots text-mint"></i>
+                <span>Muvaffaqiyatli to'lovlar</span>
+             </div>
+             <div class="absolute top-6 right-6 w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center opacity-40 group-hover:bg-mint/10 group-hover:opacity-100 transition-all">
+               <i class="fa-solid fa-chart-line text-lg"></i>
+             </div>
         </div>
         
-        <div class="card-bg p-6 rounded-2xl border border-gray-700 shadow-lg relative overflow-hidden">
-             <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-500 opacity-10 rounded-full"></div>
-             <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">To'langan Maoshlar</p>
-             <h2 class="text-2xl font-bold text-white tracking-tight">{{ total_paid|intcomma }} <span class="text-red-400 text-xs">UZS</span></h2>
-             <p class="text-[10px] text-gray-500 mt-2 font-medium">Tizimdan chiqib ketgan mablag'</p>
+        <div class="glass-card p-7 rounded-[2.5rem] shadow-2xl relative group hover:border-white/10 transition-all">
+             <div class="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Oylik Xarajat</div>
+             <div class="flex items-end gap-2">
+               <h2 class="text-3xl font-black text-white leading-none">{{ total_paid|intcomma }}</h2>
+               <span class="text-red-400 text-xs font-bold mb-1">UZS</span>
+             </div>
+             <div class="mt-6 flex items-center gap-2 text-[10px] font-bold text-gray-500">
+                <i class="fa-solid fa-receipt text-red-400"></i>
+                <span>To'langan maoshlar</span>
+             </div>
+             <div class="absolute top-6 right-6 w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center opacity-40 group-hover:bg-red-500/10 group-hover:opacity-100 transition-all">
+               <i class="fa-solid fa-money-bill-transfer text-lg"></i>
+             </div>
         </div>
 
-        <div class="card-bg p-6 rounded-2xl border border-green-500/30 shadow-lg relative overflow-hidden">
-             <div class="absolute -right-4 -top-4 w-24 h-24 bg-mint opacity-20 rounded-full"></div>
-             <p class="text-mint text-xs font-bold uppercase tracking-widest mb-1">Markaz Balansi</p>
-             <h2 class="text-2xl font-bold text-white tracking-tight">{{ center_balance|intcomma }} <span class="text-mint text-xs">UZS</span></h2>
-             <div class="mt-4 inline-flex items-center space-x-1.5 text-[10px] font-bold text-mint bg-mint-soft/10 px-2 rounded-full border border-green-900/30">
-                <i class="fa-solid fa-vault"></i> <span>Kassa Qoldig'i</span>
+        <div class="glass-card p-7 rounded-[2.5rem] shadow-2xl relative group border-mint/20 border-2 transition-all">
+             <div class="text-mint text-[10px] font-black uppercase tracking-[0.2em] mb-4">Markaz Balansi</div>
+             <div class="flex items-end gap-2">
+               <h2 class="text-3xl font-black text-white leading-none">{{ center_balance|intcomma }}</h2>
+               <span class="text-mint text-xs font-bold mb-1">UZS</span>
+             </div>
+             <div class="mt-6 flex items-center gap-2 text-[10px] font-bold text-mint bg-mint/10 px-3 py-1.5 rounded-full w-fit">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Soft Foyda (Kassa)</span>
+             </div>
+             <div class="absolute top-6 right-6 w-12 h-12 rounded-2xl bg-mint/10 flex items-center justify-center">
+               <i class="fa-solid fa-vault text-mint text-lg"></i>
              </div>
         </div>
       </div>
-
-      <!-- Monthly Report (Filtered) -->
-      {% if latest_month %}
-      <div class="bg-[#1a1c23] border border-gray-700 p-6 rounded-2xl mb-8 shadow-inner">
-        <div class="flex justify-between items-center mb-6">
-           <h3 class="font-bold text-gray-300 flex items-center gap-2">
-             <i class="fa-solid fa-calendar-check text-mint"></i> 
-             {{ latest_month|date:"F Y" }} uchun hisobot
-           </h3>
-           <div class="flex items-center gap-3">
-             {% if latest_month %}
-             <a href="{% url 'salary:export_pdf' latest_month|date:'Y-m' %}" class="bg-[#252830] border border-gray-600 hover:border-gray-400 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-full transition flex items-center shadow-sm">
-                 <i class="fa-solid fa-file-pdf mr-2 text-red-500"></i> PDF Eksport
-             </a>
-             {% endif %}
-             <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest border border-gray-700 px-3 py-1 rounded-full">Oylik Balans</span>
-           </div>
+      {% else %}
+      <!-- Stats Summary (Staff) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="glass-card p-7 rounded-[2.5rem] shadow-2xl relative group hover:border-white/10 transition-all">
+             <div class="text-mint text-[10px] font-black uppercase tracking-[0.2em] mb-4">Jami tushgan maosh (Tarix)</div>
+             <div class="flex items-end gap-2">
+               <h2 class="text-3xl font-black text-white leading-none">{{ history_total|intcomma }}</h2>
+               <span class="text-mint text-xs font-bold mb-1">UZS</span>
+             </div>
+             <div class="mt-6 flex items-center gap-2 text-[10px] font-bold text-gray-500">
+                <i class="fa-solid fa-circle-check text-mint"></i>
+                <span>Sizga to'liq to'langan summalar</span>
+             </div>
+             <div class="absolute top-6 right-6 w-12 h-12 rounded-2xl bg-mint/10 flex items-center justify-center">
+               <i class="fa-solid fa-history text-lg"></i>
+             </div>
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div class="flex flex-col">
-              <span class="text-[10px] text-gray-500 font-bold uppercase mb-1">Tushum</span>
-              <span class="text-white font-bold text-lg">{{ monthly_revenue|intcomma }}</span>
-           </div>
-           <div class="flex flex-col">
-              <span class="text-[10px] text-gray-500 font-bold uppercase mb-1">Xarajat (Maosh)</span>
-              <span class="text-white font-bold text-lg text-red-400">{{ monthly_expense|intcomma }}</span>
-           </div>
-           <div class="flex flex-col">
-              <span class="text-[10px] text-gray-500 font-bold uppercase mb-1">Sof Foyda</span>
-              <span class="text-xl font-black {% if monthly_profit >= 0 %}text-mint{% else %}text-red-500{% endif %}">
-                {% if monthly_profit > 0 %}+{% endif %}{{ monthly_profit|intcomma }}
-              </span>
-           </div>
+
+        <div class="glass-card p-7 rounded-[2.5rem] shadow-2xl relative group border-amber-500/20 border-2 transition-all">
+             <div class="text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Kutilayotgan maosh (Balans)</div>
+             <div class="flex items-end gap-2">
+               <h2 class="text-3xl font-black text-white leading-none">{{ pending_balance|intcomma }}</h2>
+               <span class="text-amber-500 text-xs font-bold mb-1">UZS</span>
+             </div>
+             <div class="mt-6 flex items-center gap-2 text-[10px] font-bold text-amber-500/80 bg-amber-500/10 px-3 py-1.5 rounded-full w-fit">
+                <i class="fa-solid fa-hourglass-half animate-pulse"></i>
+                <span>Admin tomonidan tasdiqlanishi kutilmoqda</span>
+             </div>
+             <div class="absolute top-6 right-6 w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+               <i class="fa-solid fa-hand-holding-dollar text-amber-500 text-lg"></i>
+             </div>
         </div>
       </div>
       {% endif %}
-      {% endif %}
 
 
-      <!-- Data Table -->
-      <div class="card-bg p-6 rounded-2xl border border-gray-700 shadow-lg">
-        <h3 class="font-bold text-lg text-white tracking-wide mb-6">Oylik Maoshlar Ro'yxati</h3>
+      <!-- Data Table Area -->
+      <div class="glass-card rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col flex-1">
+        <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+          <h3 class="font-black text-lg text-white tracking-tight uppercase tracking-wider flex items-center gap-3">
+            <span class="w-2 h-6 bg-mint rounded-full"></span>
+            Maoshlar Ro'yxati
+          </h3>
+          <div class="flex items-center gap-4">
+             <div class="relative hidden lg:block">
+               <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-xs"></i>
+               <input type="text" placeholder="Xodim qidirish..." class="bg-[#0f1117] border border-white/5 rounded-full px-10 py-2.5 text-xs text-white focus:outline-none focus:border-mint/30 w-64 transition-all">
+             </div>
+          </div>
+        </div>
         
         <div class="overflow-x-auto">
            <table class="w-full text-left border-collapse">
               <thead>
-                 <tr class="border-b border-gray-600 text-gray-400 text-sm">
-                    <th class="pb-3 px-4 font-medium uppercase tracking-wider">Xodim</th>
-                    <th class="pb-3 px-4 font-medium uppercase tracking-wider text-center">Rol</th>
-                    <th class="pb-3 px-4 font-medium uppercase tracking-wider text-center">Oy / Sana</th>
-                    <th class="pb-3 px-4 font-medium uppercase tracking-wider text-center">Talabalar hajmi</th>
-                    <th class="pb-3 px-4 font-medium uppercase tracking-wider text-right">Summa (Oylik)</th>
-                    <th class="pb-3 px-4 font-medium uppercase tracking-wider text-center">To'lash</th>
+                 <tr class="text-gray-500 text-[10px] font-black uppercase tracking-[0.15em] border-b border-white/5">
+                    <th class="py-6 px-8">Xodim Ma'lumotlari</th>
+                    <th class="py-6 px-4 text-center">Lavozimi</th>
+                    <th class="py-6 px-4 text-center">Davri</th>
+                    <th class="py-6 px-4 text-center">O'quvchilar</th>
+                    <th class="py-6 px-4 text-right">Summa</th>
+                    <th class="py-6 px-8 text-center">Status / Amallar</th>
                  </tr>
               </thead>
               <tbody>
                  {% for s in salaries %}
-                 <tr class="border-b border-gray-700/50 hover:bg-[#1a1c23]/50 transition cursor-default group">
-                    <td class="py-4 px-4">
-                       <div class="flex items-center space-x-3">
-                          <div class="w-9 h-9 rounded-full bg-gray-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-sm border border-gray-500">
+                 <tr class="border-b border-white/[0.03] transition-all table-row-hover group">
+                    <td class="py-6 px-8">
+                       <div class="flex items-center space-x-4">
+                          <div class="w-12 h-12 rounded-[1rem] bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center font-black text-white text-sm shadow-xl border border-white/5 group-hover:scale-110 transition-transform">
                              {{ s.user.first_name|first|default:s.user.email|first|upper }}
                           </div>
                           <div>
-                             <p class="text-white font-medium text-sm group-hover:text-mint transition">{{ s.user.get_full_name|default:s.user.email }}</p>
-                             <p class="text-gray-500 text-[11px] mt-0.5">ID: {{ s.user.id }}</p>
+                             <p class="text-white font-bold text-[15px] tracking-tight">{{ s.user.get_full_name|default:s.user.email }}</p>
+                             <div class="flex items-center gap-2 mt-1">
+                                <p class="text-gray-500 text-[9px] font-black uppercase tracking-widest">ID: #{{ s.user.id|stringformat:"04d" }}</p>
+                                {% if s.breakdown %}
+                                <span class="bg-blue-500/10 text-blue-500 text-[8px] font-black px-1.5 py-0.5 rounded border border-blue-500/20 uppercase tracking-tighter">Kirdi-chiqdi tahlili tayyor</span>
+                                {% endif %}
+                             </div>
                           </div>
                        </div>
                     </td>
-                    <td class="py-4 px-4 text-center">
+                    <td class="py-6 px-4 text-center">
                        {% if s.user.role == 'teacher' %} 
-                          <span class="bg-[#fef3c7] text-yellow-800 text-[11px] px-2 py-0.5 rounded border border-yellow-200 font-bold tracking-wide uppercase">Ustoz ({{ s.percent }}%)</span>
+                          <span class="badge-role bg-amber-500/10 text-amber-500 border border-amber-500/20">Ustoz <span class="opacity-60 ml-1">{{ s.percent }}%</span></span>
                        {% elif s.user.role == 'assistant' %} 
-                          <span class="bg-[#f3e8ff] text-purple-800 text-[11px] px-2 py-0.5 rounded border border-purple-200 font-bold tracking-wide uppercase">Yordamchi ({{ s.percent }}%)</span>
+                          <span class="badge-role bg-purple-500/10 text-purple-500 border border-purple-500/20">Yordamchi <span class="opacity-60 ml-1">{{ s.percent }}%</span></span>
                        {% else %} 
-                          <span class="bg-gray-200 text-gray-800 text-[11px] px-2 py-0.5 rounded border border-gray-300 font-bold tracking-wide uppercase">{{ s.user.role }}</span>
+                          <span class="badge-role bg-gray-500/10 text-gray-500 border border-gray-500/20">{{ s.user.role }}</span>
                        {% endif %}
                     </td>
-                    <td class="py-4 px-4 text-center">
-                       <span class="text-gray-300 font-medium text-sm bg-[#1a1c23] px-3 py-1 rounded shadow-inner border border-gray-700">{{ s.month|date:"Y-m" }}</span>
+                    <td class="py-6 px-4 text-center">
+                       <span class="text-gray-300 font-bold text-xs bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 whitespace-nowrap inline-block">{{ s.month|date:"F Y" }}</span>
                     </td>
-                    <td class="py-4 px-4 text-center">
+                    <td class="py-6 px-4 text-center">
                        {% if s.students_count > 0 %}
-                          <span class="text-white font-bold text-sm">{{ s.students_count }}</span> <span class="text-gray-500 text-xs">ta talaba</span>
+                          <div class="flex flex-col items-center">
+                            <span class="text-white font-black text-sm">{{ s.students_count }}</span>
+                            <span class="text-gray-500 text-[9px] font-bold uppercase tracking-tighter">Talaba</span>
+                          </div>
                        {% else %}
-                          <span class="text-gray-500 text-xs">—</span>
+                          <span class="text-gray-600 font-bold">—</span>
                        {% endif %}
                     </td>
-                    <td class="py-4 px-4 text-right">
-                       <div class="flex items-center justify-end space-x-2">
-                           <p class="text-white font-bold tracking-wide text-[15px] group-hover:text-mint transition">{{ s.total_amount|intcomma }}</p>
-                           <span class="text-mint text-[10px] font-bold tracking-widest mt-0.5">UZS</span>
+                    <td class="py-6 px-4 text-right">
+                       <div class="inline-flex flex-col items-end">
+                            <span class="text-white font-black tracking-tight text-lg">{{ s.total_amount|intcomma }}</span>
+                            <span class="text-mint text-[9px] font-black tracking-widest leading-none">UZS</span>
                        </div>
                     </td>
-                    <td class="py-4 px-4 text-center">
+                    <td class="py-6 px-8 text-center">
                        {% if s.is_paid %}
-                       <span class="bg-[#d1fae5] text-[#065f46] text-[11px] px-3 py-1 rounded border border-green-200 font-bold">✓ To'landi</span>
+                       <div class="inline-flex flex-col items-center gap-1">
+                          <div class="inline-flex items-center gap-2 bg-mint/10 text-mint px-4 py-2 rounded-2xl border border-mint/20">
+                            <i class="fa-solid fa-circle-check text-[10px]"></i>
+                            <span class="text-[11px] font-black uppercase tracking-widest">To'landi</span>
+                          </div>
+                          {% if s.paid_at %}
+                          <span class="text-[9px] text-gray-600 font-bold uppercase">{{ s.paid_at|date:"d.m.Y H:i" }}</span>
+                          {% endif %}
+                       </div>
                        {% else %}
                            {% if user.role == 'admin' %}
                            <form method="POST" action="{% url 'payments:send_salary' %}" style="display:inline;">
                              {% csrf_token %}
                              <input type="hidden" name="salary_id" value="{{ s.id }}">
-                             <button type="submit" class="bg-[#064e3b] border border-[#065f46] text-[#6ee7b7] text-[11px] px-3 py-1.5 rounded font-bold hover:bg-[#065f46] transition cursor-pointer" onclick="return confirm('{{ s.user.get_full_name|default:s.user.username }} ga oylik yuborilsinmi?')">
-                               💸 Yuborish
+                             <button type="submit" class="btn-pay text-white text-[11px] font-black uppercase tracking-[0.15em] px-6 py-3 rounded-2xl flex items-center gap-2 mx-auto cursor-pointer" onclick="return confirm('{{ s.user.get_full_name|default:s.user.username }} ga oylik yuborilsinmi?')">
+                               <i class="fa-solid fa-paper-plane text-[10px]"></i> Yuborish
                              </button>
                            </form>
                            {% else %}
-                           <span class="bg-yellow-900/40 text-yellow-500 text-[11px] px-3 py-1 rounded border border-yellow-700 font-bold">⏳ Kutilmoqda</span>
+                           <div class="inline-flex items-center gap-2 bg-amber-500/10 text-amber-500 px-4 py-2 rounded-2xl border border-amber-500/20">
+                             <span class="relative flex h-2 w-2">
+                               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                               <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                             </span>
+                             <span class="text-[11px] font-black uppercase tracking-widest">Kutilmoqda</span>
+                           </div>
                            {% endif %}
                        {% endif %}
                     </td>
                  </tr>
+                 {% if s.breakdown %}
+                  <tr class="bg-white/[0.02]">
+                    <td colspan="6" class="py-0 px-8">
+                        <div class="py-4 border-l-2 border-dashed border-white/5 ml-6 pl-8">
+                             <h6 class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Guruhlar bo'yicha tahlil (Kirdi-Chiqdi)</h6>
+                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for item in s.breakdown %}
+                                <div class="bg-black/20 rounded-2xl p-4 border border-white/5 flex flex-col gap-2">
+                                     <div class="flex justify-between items-start">
+                                        <span class="text-white font-bold text-xs">{{ item.group_name }}</span>
+                                        <span class="text-mint text-[10px] font-black bg-mint/10 px-2 py-0.5 rounded">+{{ item.percent }}%</span>
+                                     </div>
+                                     <div class="flex justify-between items-end">
+                                        <div class="flex flex-col">
+                                            <span class="text-gray-500 text-[9px] uppercase font-black tracking-tighter">O'quvchilar</span>
+                                            <span class="text-white font-black text-xs">{{ item.student_count }} ta</span>
+                                        </div>
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-gray-500 text-[9px] uppercase font-black tracking-tighter">Maosh ulushi</span>
+                                            <span class="text-mint font-black text-xs">{{ item.amount|intcomma }} UZS</span>
+                                        </div>
+                                     </div>
+                                </div>
+                                {% endfor %}
+                             </div>
+                        </div>
+                    </td>
+                  </tr>
+                  {% endif %}
                  {% empty %}
                  <tr>
-                    <td colspan="5" class="text-center text-gray-500 py-10">Moliya jadvalida ma'lumotlar yo'q. Avval hisoblang!</td>
+                    <td colspan="6" class="py-20">
+                      <div class="flex flex-col items-center justify-center text-center">
+                        <div class="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mb-6">
+                           <i class="fa-solid fa-folder-open text-gray-600 text-3xl"></i>
+                        </div>
+                        <h4 class="text-white font-bold mb-1">Ma'lumotlar topilmadi</h4>
+                        <p class="text-gray-500 text-xs max-w-xs mx-auto">Hozircha moliya jadvalida hech qanday ma'lumot yo'q. Avval hisoblash tugmasini bosing.</p>
+                      </div>
+                    </td>
                  </tr>
                  {% endfor %}
               </tbody>
@@ -232,3 +392,4 @@
 
 </body>
 </html>
+

@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import F, ProtectedError
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import role_required
 from apps.courses.models import Course, Enrollment
@@ -15,11 +16,49 @@ def dashboard_home(request):
 from apps.homework.models import Homework
 from apps.attendance.models import Attendance
 from apps.exams.models import Exam, ExamResult
-from apps.courses.models import Lesson
+from apps.courses.models import Lesson, Group, Course, Enrollment
+import datetime
+
+def generate_lessons(group, startDate=None, lessonCountStart=None):
+    """Auto-generates 30 days of lessons based on schedule type"""
+    current_date = startDate or group.start_date
+    lessons_created = lessonCountStart or 0
+    days_to_check = 30
+    
+    if group.schedule_type in ['3_days_toq', '3_days']:
+        target_days = [0, 2, 4] # Mon, Wed, Fri
+    elif group.schedule_type == '3_days_juft':
+        target_days = [1, 3, 5] # Tue, Thu, Sat
+    elif group.schedule_type == '5_days':
+        target_days = [0, 1, 2, 3, 4]
+    else: # daily
+        target_days = [0, 1, 2, 3, 4, 5, 6]
+
+    for i in range(days_to_check + 1):
+        target_date = current_date + datetime.timedelta(days=i)
+        if target_date > group.end_date and not startDate: # Only cap by end_date if it's initial generation
+             break
+        
+        # If startDate is provided, we just want 30 days regardless of end_date (extension mode)
+        # But if i == 0 and startDate == last lesson date, skip it to avoid duplicates
+        if startDate and i == 0: continue
+
+        if target_date.weekday() in target_days:
+            lessons_created += 1
+            Lesson.objects.create(
+                group=group,
+                title=f"{lessons_created}-dars. {group.course.title}",
+                date=target_date,
+                order=lessons_created
+            )
+    return lessons_created
 
 @login_required
 @role_required('student')
 def student_dashboard(request):
+    from apps.notifications.models import Notification
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
+    
     enrollments = Enrollment.objects.filter(student=request.user)
     
     from apps.certificates.models import Certificate
@@ -27,10 +66,15 @@ def student_dashboard(request):
     
     active_enrollment = enrollments.filter(status='approved').first()
     
+    # Check for unpaid enrollments to focus on payments
+    unpaid_enrollment = enrollments.filter(status='approved', amount_paid__lt=F('group__course__price')).exists()
+    
     context = {
         'enrollments': enrollments,
         'certificates': certificates,
-        'active_enrollment': active_enrollment
+        'active_enrollment': active_enrollment,
+        'has_unpaid': unpaid_enrollment,
+        'unread_notifications': unread_notifications,
     }
     
     if active_enrollment:
@@ -68,7 +112,9 @@ def teacher_dashboard(request):
     from apps.courses.models import Group, Enrollment, Lesson
     from apps.salary.models import Salary
     from apps.attendance.models import Attendance
+    from apps.notifications.models import Notification
     from django.utils import timezone
+    from datetime import datetime, timedelta
     
     today = timezone.now().date()
     groups = Group.objects.filter(teacher=request.user)
@@ -85,14 +131,49 @@ def teacher_dashboard(request):
     presents = Attendance.objects.filter(group__in=groups, status='present').count()
     avg_attendance = int((presents / total_att) * 100) if total_att > 0 else 0
     
+    # Barcha guruhlaridagi talabalar ro'yxati (takrorlanmas)
+    my_students = User.objects.filter(id__in=Enrollment.objects.filter(group__in=groups, status='approved').values('student_id'))
+    
+    # Bugunlik davomat holati
+    today_attendances = Attendance.objects.filter(group__in=groups, date=today).select_related('student', 'group')
+    
     groups_with_stats = []
     for g in groups:
+        total_lessons = Lesson.objects.filter(group=g).count()
+        completed_lessons = Lesson.objects.filter(group=g, date__lt=today).count()
+        progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+        
         groups_with_stats.append({
             'group': g,
             'students_count': Enrollment.objects.filter(group=g, status='approved').count(),
-            'lessons_count': Lesson.objects.filter(group=g).count(),
+            'lessons_count': total_lessons,
+            'completed_lessons': completed_lessons,
+            'progress': progress,
             'is_new': g.start_date >= today
         })
+        
+    # --- 10 daqiqa oldin dars eslatmasi mantiqi ---
+    now = timezone.now()
+    for g in groups:
+        # Guruhning dars boshlanish vaqtini bugungi sana bilan birlashtiramiz
+        lesson_start = datetime.combine(now.date(), g.lesson_start_time)
+        lesson_start = timezone.make_aware(lesson_start)
+        
+        time_diff = lesson_start - now
+        # Agar dars boshlanishiga 0 dan 10 daqiqagacha vaqt qolgan bo'lsa
+        if timedelta(minutes=0) < time_diff <= timedelta(minutes=10):
+            notif_title = f"Dars boshlanishiga 10 daqiqa qoldi: {g.name}"
+            # Shu dars uchun bugun hali xabar yuborilmagan bo'lsa yaratish
+            if not Notification.objects.filter(user=request.user, title=notif_title, created_at__date=now.date()).exists():
+                Notification.objects.create(
+                    user=request.user,
+                    title=notif_title,
+                    body=f"Sizning '{g.name}' guruhingizdagi darsingiz {g.lesson_start_time.strftime('%H:%M')} da boshlanadi. Iltimos, tayyorgarlik ko'ring.",
+                    notif_type='lesson_reminder'
+                )
+    
+    # O'qilmagan xabarlarni olish
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
         
     context = {
         'total_students': total_students,
@@ -101,16 +182,26 @@ def teacher_dashboard(request):
         'avg_attendance': avg_attendance,
         'groups_with_stats': groups_with_stats,
         'today_lessons': today_lessons,
+        'my_students': my_students,
+        'today_attendances': today_attendances,
+        'unread_notifications': unread_notifications,
     }
     return render(request, 'dashboard/teacher.html', context)
 
 @login_required
 @role_required('assistant')
 def assistant_dashboard(request):
-    from apps.courses.models import Group, Enrollment
+    from apps.courses.models import Group, Enrollment, Lesson
     from apps.salary.models import Salary
     from apps.attendance.models import Attendance
+    from apps.homework.models import Homework
+    from apps.exams.models import Exam
+    from apps.chat.models import Message
     from django.utils import timezone
+    from django.db.models import Q
+    
+    from apps.notifications.models import Notification
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
     
     groups = Group.objects.filter(assistant=request.user)
     total_students = Enrollment.objects.filter(group__in=groups, status='approved').values('student').distinct().count()
@@ -118,12 +209,34 @@ def assistant_dashboard(request):
     latest_salary = Salary.objects.filter(user=request.user).order_by('-month').first()
     salary_amount = latest_salary.total_amount if latest_salary else 0
     
+    today = timezone.now().date()
+    
+    # --- Advanced Stats for Maximal Assistant ---
+    # Pending Homeworks (Only submitted ones for my groups)
+    pending_homeworks = Homework.objects.filter(lesson__group__in=groups, status='submitted').order_by('-submitted_at')
+    pending_hw_count = pending_homeworks.count()
+    
+    # Recent/Upcoming Exams (for my groups)
+    upcoming_exams = Exam.objects.filter(group__in=groups).order_by('-date')[:5]
+    
+    # Unread Chats (Direct to me or in my groups)
+    unread_chats_count = Message.objects.filter(
+        Q(receiver=request.user, msg_type='direct') | Q(group__in=groups, msg_type='group'),
+        is_read=False
+    ).exclude(sender=request.user).count()
+
     groups_with_stats = []
     for g in groups:
+        total_lessons = Lesson.objects.filter(group=g).count()
+        completed_lessons = Lesson.objects.filter(group=g, date__lt=today).count()
+        progress = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+        
         groups_with_stats.append({
             'group': g,
             'students_count': Enrollment.objects.filter(group=g, status='approved').count(),
-            'lessons_count': Lesson.objects.filter(group=g).count(),
+            'lessons_count': total_lessons,
+            'completed_lessons': completed_lessons,
+            'progress': progress,
         })
         
     context = {
@@ -131,6 +244,11 @@ def assistant_dashboard(request):
         'groups_count': groups.count(),
         'salary_amount': salary_amount,
         'groups_with_stats': groups_with_stats,
+        'unread_notifications': unread_notifications,
+        'pending_hw_count': pending_hw_count,
+        'pending_homeworks': pending_homeworks[:5],
+        'upcoming_exams': upcoming_exams,
+        'unread_chats_count': unread_chats_count,
     }
     return render(request, 'dashboard/assistant.html', context)
 
@@ -142,7 +260,7 @@ from apps.accounts.models import User
 @role_required('admin')
 def admin_dashboard(request):
     from apps.courses.models import Enrollment, Group
-    from django.db.models import Sum
+    from django.db.models import Sum, ProtectedError
     from datetime import date
     import datetime
 
@@ -195,8 +313,9 @@ def admin_dashboard(request):
             assistant_id = request.POST.get('assistant_id')
             start_date = request.POST.get('start_date')
             end_date = request.POST.get('end_date')
-            schedule_type = request.POST.get('schedule_type', '3_days')
+            schedule_type = request.POST.get('schedule_type', '3_days_toq')
             start_time = request.POST.get('lesson_start_time', '10:00')
+            end_time = request.POST.get('lesson_end_time', '11:30')
             
             try:
                 from apps.courses.models import Course
@@ -204,12 +323,18 @@ def admin_dashboard(request):
                 teacher = User.objects.get(id=teacher_id)
                 assistant = User.objects.get(id=assistant_id) if assistant_id else None
                 
-                Group.objects.create(
+                group = Group.objects.create(
                     name=name, course=course, teacher=teacher, assistant=assistant,
                     start_date=start_date, end_date=end_date,
-                    schedule_type=schedule_type, lesson_start_time=start_time
+                    schedule_type=schedule_type, 
+                    lesson_start_time=start_time,
+                    lesson_end_time=end_time
                 )
-                messages.success(request, f"'{name}' guruhi muvaffaqiyatli ochildi va darslar avtomatik yaratildi!")
+                
+                # Auto generate lessons
+                generate_lessons(group)
+                
+                messages.success(request, f"'{name}' guruhi ochildi va darslar avtomatik yaratildi!")
                 return redirect('dashboard:admin')
             except Exception as e:
                 messages.error(request, f"Xatolik: {str(e)}")
@@ -233,7 +358,7 @@ def admin_dashboard(request):
                 
                 # Check for existing
                 if Enrollment.objects.filter(student=student, group=group).exists():
-                    messages.warning(request, f"{student.first_name} allaqachon '{group.name}' guruhida mavjud!")
+                    messages.warning(request, f"Bu user '{group.name}' guruhida bor!")
                 else:
                     enr = Enrollment.objects.create(
                         student=student, 
@@ -274,8 +399,11 @@ def admin_dashboard(request):
     
     # Financial Stats (Consistent with centers balance)
     from apps.payments.models import Payment
+    from apps.notifications.models import Notification
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
+    
     from apps.salary.models import Salary
-    from apps.courses.models import Course # Ensure course is available for context if needed
+    from apps.courses.models import Course, Group, Enrollment
     
     gross_total = Payment.objects.filter(status='success').exclude(method='salary_transfer').aggregate(total=Sum('amount'))['total'] or 0
     total_paid = Salary.objects.filter(is_paid=True).aggregate(total=Sum('total_amount'))['total'] or 0
@@ -314,18 +442,20 @@ def admin_dashboard(request):
         'active_groups': active_groups,
         'pending_count': pending_count,
         'recent_enrollments': pending_enrollments_all[:5],
+        'unread_notifications': unread_notifications,
     }
     return render(request, 'dashboard/admin.html', context)
 
 
 @login_required
-@role_required('admin')
+@role_required('admin', 'teacher')
 def group_preview(request, group_id):
-    from apps.courses.models import Group, Enrollment
+    from apps.courses.models import Group, Enrollment, Lesson
     from django.shortcuts import get_object_or_404
 
     group = get_object_or_404(Group.objects.select_related('course', 'teacher', 'assistant'), id=group_id)
     enrollments = Enrollment.objects.filter(group=group).select_related('student').order_by('status')
+    lessons = Lesson.objects.filter(group=group).order_by('date', 'order')
 
     students_data = []
     for enr in enrollments:
@@ -344,8 +474,17 @@ def group_preview(request, group_id):
     context = {
         'group': group,
         'students_data': students_data,
+        'lessons': lessons,
         'center_pct': 100 - group.teacher_percent - group.assistant_percent,
     }
+
+    if request.user.role == 'admin':
+        context.update({
+            'teachers_only': User.objects.filter(role='teacher'),
+            'assistants_only': User.objects.filter(role='assistant'),
+            'SCHEDULE_TYPES': Group.SCHEDULE_TYPES
+        })
+
     return render(request, 'dashboard/fragments/group_preview.html', context)
 
 
@@ -436,8 +575,11 @@ def delete_user(request, user_id):
             messages.error(request, "Admin hisobini o'chirib bo'lmaydi!")
             return redirect('dashboard:admin')
         name = user.get_full_name() or user.username
-        user.delete()
-        messages.success(request, f"{name} tizimdan o'chirildi.")
+        try:
+            user.delete()
+            messages.success(request, f"{name} tizimdan o'chirildi.")
+        except ProtectedError:
+            messages.error(request, f"Xatolik: {name} o'chira olmaysiz. Chunki unga bog'langan faol guruhlar, maoshlar yoki boshqa ma'lumotlar mavjud. Avval ularni boshqa o'qituvchiga o'tkazing yoki o'chiring.")
     return redirect('dashboard:admin')
 
 
@@ -507,4 +649,78 @@ def update_group_percent(request, group_id):
             messages.success(request, f"{group.name}: Ustoz {t_pct}%, Yordamchi {a_pct}%, Markaz {center_pct}% foizlari yangilandi.")
         except ValueError:
             messages.error(request, "Foizlar butun son bo'lishi kerak.")
+    return redirect('dashboard:admin')
+# ─────────────────────────────────────────────
+# ADMIN: Guruhni tahrirlash
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def update_group(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    if request.method == 'POST':
+        group.name = request.POST.get('name', group.name)
+        group.teacher_id = request.POST.get('teacher_id', group.teacher_id)
+        group.assistant_id = request.POST.get('assistant_id', group.assistant_id) or None
+        group.lesson_start_time = request.POST.get('lesson_start_time', group.lesson_start_time)
+        group.lesson_end_time = request.POST.get('lesson_end_time', group.lesson_end_time)
+        group.schedule_type = request.POST.get('schedule_type', group.schedule_type)
+        group.is_active = request.POST.get('is_active') == '1'
+        group.save()
+        messages.success(request, f"'{group.name}' guruhi tahrirlandi.")
+    return redirect('dashboard:admin')
+
+# ─────────────────────────────────────────────
+# ADMIN: Guruhni o'chirish
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def delete_group(request, group_id):
+    from django.db.models import ProtectedError
+    group = get_object_or_404(Group, id=group_id)
+    if request.method == 'POST':
+        try:
+            group.delete()
+            messages.success(request, f"'{group.name}' guruhi o'chirildi.")
+        except ProtectedError:
+            messages.error(request, f"Xatolik: '{group.name}' guruhini o'chira olmaysiz. Chunki bu guruhda ro'yxatdan o'tgan talabalar yoki mavjud darslar bor. Avval talabalarni boshqa guruhga o'tkazing.")
+    return redirect('dashboard:admin')
+
+# ─────────────────────────────────────────────
+# ADMIN: Jadvalni 1 oyga uzaytirish
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def extend_lessons(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+    if request.method == 'POST':
+        last_lesson = Lesson.objects.filter(group=group).order_by('-date').first()
+        if last_lesson:
+            generate_lessons(group, startDate=last_lesson.date, lessonCountStart=last_lesson.order)
+            messages.success(request, f"'{group.name}' jadvali yana 1 oyga uzaytirildi.")
+        else:
+            generate_lessons(group)
+            messages.success(request, f"'{group.name}' jadvali yangidan yaratildi.")
+    return redirect('dashboard:admin')
+
+# ─────────────────────────────────────────────
+# ADMIN: Darsni yangilash (Fors-major)
+# ─────────────────────────────────────────────
+@login_required
+@role_required('admin')
+def update_lesson(request, lesson_id):
+    from django.http import JsonResponse
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+    if request.method == 'POST':
+        new_date = request.POST.get('date')
+        new_title = request.POST.get('title')
+        if new_date:
+            lesson.date = new_date
+        if new_title:
+            lesson.title = new_title
+        lesson.save()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f"Dars yangilandi: {lesson.title}"})
+            
+        messages.success(request, f"Dars jadvali yangilandi: {lesson.title}")
     return redirect('dashboard:admin')

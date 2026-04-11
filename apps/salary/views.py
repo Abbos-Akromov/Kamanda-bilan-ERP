@@ -5,8 +5,10 @@ from apps.accounts.decorators import role_required
 from .models import Salary
 from apps.accounts.models import User
 from apps.courses.models import Course, Group, Enrollment
+from apps.attendance.models import Attendance
 from datetime import datetime
 from decimal import Decimal
+import calendar
 
 @login_required
 def salary_list(request):
@@ -14,12 +16,8 @@ def salary_list(request):
     from datetime import datetime
     
     user = request.user
-    salaries = Salary.objects.all().order_by('-month')
+    salaries = Salary.objects.all().order_by('-month', 'user__username')
     
-    # Filter by user if not admin
-    if user.role != 'admin':
-        salaries = salaries.filter(user=user)
-        
     month_filter = request.GET.get('month')
     
     if month_filter and len(month_filter) == 7 and '-' in month_filter:
@@ -30,12 +28,64 @@ def salary_list(request):
         except ValueError:
             latest_month = None
     else:
+        # Default to latest month if not specified
         latest_month = salaries.first().month if salaries.exists() else None
+        if latest_month:
+            salaries = salaries.filter(month=latest_month)
     
+    # Filter by user if not admin
+    if user.role != 'admin':
+        salaries = salaries.filter(user=user)
+        # Calculate totals for teacher/assistant
+        pending_balance = Salary.objects.filter(user=user, is_paid=False).aggregate(total=Sum('total_amount'))['total'] or 0
+        history_total = Salary.objects.filter(user=user, is_paid=True).aggregate(total=Sum('total_amount'))['total'] or 0
+        
+        # ══ ENHANCEMENT: Calculate breakdown for each salary record ══
+        from apps.courses.models import Group, Enrollment
+        import calendar
+        
+        for s in salaries:
+            breakdown = []
+            month_start = s.month
+            last_day = calendar.monthrange(month_start.year, month_start.month)[1]
+            month_end = month_start.replace(day=last_day)
+            
+            # Find groups active for THIS user in THIS month
+            filter_kwargs = {
+                'start_date__lte': month_end,
+                'end_date__gte': month_start,
+            }
+            if s.user.role == 'teacher':
+                filter_kwargs['teacher'] = s.user
+            else:
+                filter_kwargs['assistant'] = s.user
+                
+            active_groups = Group.objects.filter(**filter_kwargs)
+            for g in active_groups:
+                count = Enrollment.objects.filter(group=g, status='approved').count()
+                if count > 0:
+                    revenue = g.course.price * Decimal(str(count))
+                    # Determine percent based on role
+                    pct = g.teacher_percent if s.user.role == 'teacher' else g.assistant_percent
+                    amount = (revenue * Decimal(str(pct))) / Decimal('100')
+                    breakdown.append({
+                        'group_name': g.name,
+                        'student_count': count,
+                        'course_price': g.course.price,
+                        'percent': pct,
+                        'amount': amount
+                    })
+            s.breakdown = breakdown
+    else:
+        pending_balance = 0
+        history_total = 0
+        
     context = {
         'salaries': salaries,
         'latest_month': latest_month,
         'filtered_month': month_filter,
+        'pending_balance': pending_balance,
+        'history_total': history_total,
     }
 
     # Admin-only stats
@@ -83,27 +133,41 @@ def calculate_monthly_salary(request):
         
         month = datetime.strptime(month_str, '%Y-%m').date().replace(day=1)
         
+        # Calculate month end for overlap check
+        last_day = calendar.monthrange(month.year, month.month)[1]
+        month_end = month.replace(day=last_day)
+        
         # ─── Step 1: Calculate Teacher Salaries ───
         teachers = User.objects.filter(role='teacher')
         for teacher in teachers:
             total_students = 0
             total_base = Decimal('0')
             total_salary = Decimal('0')
-            teacher_pct = 0 # Will take from groups, assuming same for teacher usually but we calculate per group
+            teacher_pct = 0
             
-            # Find all groups for this teacher
-            groups = Group.objects.filter(teacher=teacher)
-            for g in groups:
+            # Use overlap check: group must have been active during this month
+            active_groups = Group.objects.filter(
+                teacher=teacher,
+                start_date__lte=month_end,
+                end_date__gte=month
+            )
+            
+            for g in active_groups:
+                # Check for "Proof of Work" - at least one attendance record in this month
+                if not Attendance.objects.filter(group=g, date__year=month.year, date__month=month.month).exists():
+                    continue
+                    
                 count = Enrollment.objects.filter(group=g, status='approved').count()
                 total_students += count
-                # Expected revenue for this group
                 group_revenue = g.course.price * Decimal(str(count))
                 total_base += group_revenue
-                # Share for this group
                 total_salary += (group_revenue * Decimal(g.teacher_percent)) / Decimal('100')
-                teacher_pct = g.teacher_percent # Just for display in the model
+                teacher_pct = g.teacher_percent
             
-            if total_students > 0 or total_salary > 0:
+            # Clean up existing record for this month/user if it exists but is no longer active
+            if total_students == 0 and total_salary == 0:
+                Salary.objects.filter(user=teacher, month=month, is_paid=False).delete()
+            else:
                 Salary.objects.update_or_create(
                     user=teacher, month=month,
                     defaults={
@@ -122,8 +186,18 @@ def calculate_monthly_salary(request):
             total_salary = Decimal('0')
             assistant_pct = 0
             
-            groups = Group.objects.filter(assistant=assistant)
-            for g in groups:
+            # Use overlap check
+            active_groups = Group.objects.filter(
+                assistant=assistant,
+                start_date__lte=month_end,
+                end_date__gte=month
+            )
+            
+            for g in active_groups:
+                # Check for "Proof of Work"
+                if not Attendance.objects.filter(group=g, date__year=month.year, date__month=month.month).exists():
+                    continue
+                    
                 count = Enrollment.objects.filter(group=g, status='approved').count()
                 total_students += count
                 group_revenue = g.course.price * Decimal(str(count))
@@ -131,7 +205,9 @@ def calculate_monthly_salary(request):
                 total_salary += (group_revenue * Decimal(g.assistant_percent)) / Decimal('100')
                 assistant_pct = g.assistant_percent
                 
-            if total_students > 0 or total_salary > 0:
+            if total_students == 0 and total_salary == 0:
+                Salary.objects.filter(user=assistant, month=month, is_paid=False).delete()
+            else:
                 Salary.objects.update_or_create(
                     user=assistant, month=month,
                     defaults={

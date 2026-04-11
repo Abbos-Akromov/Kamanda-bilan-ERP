@@ -13,7 +13,9 @@ SECRET_KEY = 'django-insecure-some-secret-key-for-lms-project'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['carita-nonspurious-proactively.ngrok-free.dev', 'localhost', '127.0.0.1', '*']
+
+CSRF_TRUSTED_ORIGINS = ['https://carita-nonspurious-proactively.ngrok-free.dev']
 
 # Application definition
 INSTALLED_APPS = [
@@ -94,10 +96,7 @@ DATABASES = {
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [('127.0.0.1', 6379)],
-        },
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
 

@@ -34,17 +34,15 @@
     
     <div class="flex items-center space-x-6 mt-4 md:mt-0 font-medium text-sm">
       <a href="{% url 'dashboard:teacher' %}" class="text-mint border-b-2 border-mint pb-4 -mb-[18px]">Dashboard</a>
-      <a href="#" class="text-gray-400 hover:text-gray-200">Guruhlarim</a>
-      <a href="#" onclick="alert('Davomatni ko\'rish uchun o\'z guruhingizni tanlang'); return false;" class="text-gray-400 hover:text-gray-200">Davomat</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('myGroupsModal').classList.remove('hidden')" class="text-gray-400 hover:text-gray-200">Guruhlarim</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('davomatSelectionModal').classList.remove('hidden')" class="text-gray-400 hover:text-gray-200">Davomat</a>
       <a href="{% url 'salary:list' %}" class="text-gray-400 hover:text-gray-200">Maosh</a>
     </div>
 
     <!-- User Profile right -->
     <div class="hidden md:flex items-center space-x-4">
-      <div class="relative">
-        <i class="fa-regular fa-bell text-gray-400 text-xl border border-gray-700 p-2 rounded-full cursor-pointer hover:text-white transition"></i>
-        <div class="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 border-[#1a1c23]"></div>
-      </div>
+      <!-- Notifications Dropdown -->
+      {% include 'dashboard/includes/notification_dropdown.html' %}
       <div class="flex items-center space-x-3 bg-transparent pr-2 rounded-full cursor-pointer">
         <div class="bg-blue-100 w-9 h-9 rounded-full flex items-center justify-center font-bold text-blue-800 text-sm">
           {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|default:''|upper }}
@@ -62,11 +60,11 @@
           <i class="fa-solid fa-shapes opacity-80"></i>
           <span>Dashboard</span>
         </a>
-        <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+        <a href="javascript:void(0)" onclick="document.getElementById('myGroupsModal').classList.remove('hidden')" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-user"></i>
           <span>Guruhlarim</span>
         </a>
-        <a href="#" onclick="alert('Davomatni ko\'rish uchun o\'z guruhingizni tanlang'); return false;" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+        <a href="javascript:void(0)" onclick="document.getElementById('davomatSelectionModal').classList.remove('hidden')" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-clock"></i>
           <span>Davomat</span>
         </a>
@@ -74,7 +72,7 @@
           <i class="fa-solid fa-dollar-sign px-1"></i>
           <span>Maosh</span>
         </a>
-        <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+        <a href="{% url 'chat:list' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-message"></i>
           <span>Chat</span>
         </a>
@@ -104,29 +102,29 @@
       <!-- Stats Row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         
-        <div class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col">
+        <div onclick="document.getElementById('studentsModal').classList.remove('hidden')" class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col cursor-pointer hover:border-mint hover:shadow-[0_0_15px_rgba(0,230,153,0.1)] transition transform hover:-translate-y-1">
           <span class="text-gray-300 text-sm font-medium mb-2">Jami studentlar</span>
           <span class="text-3xl font-bold text-white mb-1">{{ total_students }}</span>
           <span class="text-mint text-sm font-medium mt-auto">{{ groups_count }} ta guruh</span>
         </div>
         
-        <div class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col relative overflow-hidden">
+        <a href="{% url 'salary:list' %}" class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col relative overflow-hidden cursor-pointer hover:border-mint hover:shadow-[0_0_15px_rgba(0,230,153,0.1)] transition transform hover:-translate-y-1">
           <div class="absolute -right-2 -top-2 w-12 h-12 bg-mint opacity-5 rounded-full"></div>
           <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-3">Oylik maosh</span>
           <span class="text-2xl font-bold text-white mb-1">{{ salary_amount|intcomma }} <span class="text-mint text-[10px]">UZS</span></span>
-          <span class="text-mint text-[10px] font-bold mt-auto uppercase tracking-tighter">Oxirgi hisoblangan</span>
-        </div>
+          <span class="text-mint text-[10px] font-bold mt-auto uppercase tracking-tighter">Batafsil ko'rish</span>
+        </a>
         
-        <div class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col">
+        <div onclick="document.getElementById('attendanceModal').classList.remove('hidden')" class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col cursor-pointer hover:border-mint hover:shadow-[0_0_15px_rgba(0,230,153,0.1)] transition transform hover:-translate-y-1">
           <span class="text-gray-300 text-sm font-medium mb-2">O'rtacha davomat</span>
           <span class="text-3xl font-bold text-white mb-1">{{ avg_attendance }}%</span>
-          <span class="text-mint text-sm font-medium mt-auto">Yaxshi</span>
+          <span class="text-mint text-sm font-medium mt-auto">Bugungi holatni ko'rish</span>
         </div>
         
-        <div class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col">
+        <div onclick="document.getElementById('lessonsModal').classList.remove('hidden')" class="card-bg p-5 rounded-2xl border border-gray-700 shadow-sm flex flex-col cursor-pointer hover:border-mint hover:shadow-[0_0_15px_rgba(0,230,153,0.1)] transition transform hover:-translate-y-1">
           <span class="text-gray-300 text-sm font-medium mb-2">Bugungi darslar</span>
           <span class="text-3xl font-bold text-white mb-1">{{ today_lessons|length }}</span>
-          <span class="text-mint text-sm font-medium mt-auto">Reja asosida</span>
+          <span class="text-mint text-sm font-medium mt-auto">Darslar jadvalini ko'rish</span>
         </div>
         
       </div>
@@ -180,7 +178,7 @@
         </div>
         
         <!-- Guruhlar Ro'yxati (2 cols) -->
-        <div class="card-bg p-6 rounded-2xl border border-gray-700 shadow-lg lg:col-span-2">
+        <div id="groups" class="card-bg p-6 rounded-2xl border border-gray-700 shadow-lg lg:col-span-2">
           <h3 class="font-bold text-lg text-white mb-6">Barcha guruhlarim</h3>
           <div class="space-y-4 overflow-y-auto max-h-[500px] pr-2">
             {% for item in groups_with_stats %}
@@ -188,11 +186,21 @@
               <div class="flex justify-between items-start mb-3">
                 <div>
                   <h5 class="text-white font-bold text-sm">{{ item.group.name }}</h5>
-                  <p class="text-gray-500 text-[10px]">{{ item.group.schedule_type_display }} • {{ item.group.lesson_start_time|time:"H:i" }}</p>
+                  <p class="text-gray-500 text-[10px]">{{ item.group.get_schedule_type_display }} • {{ item.group.lesson_start_time|time:"H:i" }}</p>
                 </div>
-                <span class="text-[10px] text-gray-400 bg-gray-900 px-2 py-0.5 rounded border border-gray-700">{{ item.students_count }} talaba</span>
+                <div class="text-right">
+                  <span class="text-[10px] text-gray-400 bg-gray-900 px-2 py-0.5 rounded border border-gray-700 block mb-1">{{ item.students_count }} talaba</span>
+                  <span class="text-[9px] font-bold text-mint">{{ item.progress }}%</span>
+                </div>
               </div>
+              
+              <!-- Progress Bar (Maximal Feature) -->
+              <div class="w-full h-1 bg-gray-800 rounded-full overflow-hidden mb-4">
+                <div class="h-full bg-mint shadow-[0_0_8px_rgba(0,230,153,0.4)] transition-all duration-500" style="width:{{ item.progress }}%"></div>
+              </div>
+
               <div class="flex space-x-2">
+                <a href="javascript:void(0)" onclick="showPreview('{% url 'dashboard:group_preview' item.group.id %}', '{{ item.group.name }} — Jadval')" class="flex-1 bg-mint/10 text-mint py-1.5 rounded-lg text-[9px] font-bold uppercase text-center hover:bg-mint/20">Jadval</a>
                 <a href="{% url 'attendance:list' item.group.id %}" class="flex-1 bg-gray-800 text-gray-300 py-1.5 rounded-lg text-[9px] font-bold uppercase text-center hover:bg-gray-700">Tarix</a>
                 <a href="{% url 'exams:list' item.group.id %}" class="flex-1 bg-gray-800 text-gray-300 py-1.5 rounded-lg text-[9px] font-bold uppercase text-center hover:bg-gray-700">Imtihon</a>
                 <a href="{% url 'homework:list' item.group.id %}" class="flex-1 bg-gray-800 text-gray-300 py-1.5 rounded-lg text-[9px] font-bold uppercase text-center hover:bg-gray-700">Vazifa</a>
@@ -207,10 +215,256 @@
     </main>
   </div>
 
+  <!-- Universal Detail Preview Modal (MAXIMAL) -->
+  <div id="previewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(10px);">
+    <div style="background:#1a1c23;border:1px solid #374151;border-radius:24px;width:100%;max-width:640px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 60px rgba(0,0,0,1);">
+      <div style="padding:18px 24px;border-bottom:1px solid #374151;display:flex;justify-content:space-between;align-items:center;background:rgba(37,40,48,0.5);">
+         <h3 id="previewTitle" style="margin:0;font-size:1rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">Guruh tafsiloti</h3>
+         <button onclick="closePreview()" style="background:transparent;border:none;color:#9ca3af;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#9ca3af'">
+            <i class="fa-solid fa-xmark text-lg"></i>
+         </button>
+      </div>
+      <div id="previewBody" style="flex:1;overflow-y:auto;padding:24px;background:#1a1c23;">
+         <!-- Content loaded via Fetch -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---- Universal Preview Modal ----
+    function showPreview(url, title) {
+      const modal = document.getElementById('previewModal');
+      const titleEl = document.getElementById('previewTitle');
+      const bodyEl = document.getElementById('previewBody');
+      
+      titleEl.textContent = title;
+      bodyEl.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:15px;">
+          <svg width="42" height="42" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#00e699">
+            <g fill="none" fill-rule="evenodd"><g transform="translate(1 1)" stroke-width="2">
+              <circle stroke-opacity=".2" cx="18" cy="18" r="18"/>
+              <path d="M36 18c0-9.94-8.06-18-18-18"><animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="0.9s" repeatCount="indefinite"/></path>
+            </g></g>
+          </svg>
+          <p style="color:#6b7280;font-size:0.85rem;font-weight:600;letter-spacing:0.02em;">Ma'lumotlar yuklanmoqda...</p>
+        </div>`;
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      
+      fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+        .then(r => r.text())
+        .then(html => { bodyEl.innerHTML = html; })
+        .catch(err => { bodyEl.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px;font-weight:bold;">Xatolik: ${err}</p>`; });
+    }
+
+    function closePreview() {
+      document.getElementById('previewModal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    
+    document.getElementById('previewModal').addEventListener('click', function(e) {
+      if (e.target === this) closePreview();
+    });
+  </script>
+
   <!-- Scroll arrow at bottom -->
-  <div class="fixed bottom-6 right-6">
-    <div class="w-12 h-12 rounded-full border border-gray-700 bg-[#252830] shadow-2xl flex items-center justify-center text-mint cursor-pointer hover:bg-gray-800 transition">
+  <a href="{% url 'chat:list' %}" class="fixed bottom-6 right-6 z-50">
+    <div class="w-12 h-12 rounded-full border border-gray-700 bg-[#252830] shadow-2xl flex items-center justify-center text-mint cursor-pointer hover:bg-gray-800 transition transform hover:scale-110">
       <i class="fa-solid fa-comment-dots text-xl"></i>
+    </div>
+  </a>
+
+  <!-- Students Modal -->
+  <div id="studentsModal" class="hidden fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+    <div class="card-bg w-full max-w-2xl rounded-2xl border border-gray-700 flex flex-col max-h-[80vh]">
+      <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-white">Barcha Talabalar</h2>
+          <p class="text-sm text-gray-400">Sizning guruhlaringizda o'qiydigan barcha talabalar</p>
+        </div>
+        <button onclick="document.getElementById('studentsModal').classList.add('hidden')" class="text-gray-400 hover:text-white transition p-2">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto">
+        <div class="space-y-3">
+          {% for student in my_students %}
+          <div class="badge-bg p-4 rounded-xl border border-gray-800 flex items-center space-x-4">
+            <div class="w-10 h-10 rounded-full bg-mint-soft flex items-center justify-center font-bold text-[#047857]">
+              {{ student.first_name|first|upper|default:student.username|first|upper }}
+            </div>
+            <div>
+              <p class="text-white font-bold">{{ student.get_full_name|default:student.username }}</p>
+              <p class="text-gray-500 text-xs">{{ student.email }}</p>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-gray-500 text-center py-4">Hozircha talabalar yo'q.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Attendance Modal -->
+  <div id="attendanceModal" class="hidden fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+    <div class="card-bg w-full max-w-3xl rounded-2xl border border-gray-700 flex flex-col max-h-[80vh]">
+      <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-white">Bugungi Davomat Holati</h2>
+          <p class="text-sm text-gray-400">{% now "d-F, Y" %} sifatidagi barcha guruhlar qatnashishi</p>
+        </div>
+        <button onclick="document.getElementById('attendanceModal').classList.add('hidden')" class="text-gray-400 hover:text-white transition p-2">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto">
+        <div class="space-y-3">
+          {% for record in today_attendances %}
+          <div class="badge-bg p-4 rounded-xl border border-gray-800 flex justify-between items-center">
+            <div>
+              <p class="text-white font-bold">{{ record.student.get_full_name|default:record.student.username }}</p>
+              <p class="text-gray-500 text-xs">{{ record.group.name }} guruhida</p>
+            </div>
+            <div>
+              {% if record.status == 'present' %}
+                <span class="bg-green-500/10 text-green-400 text-xs font-bold px-3 py-1.5 rounded-full"><i class="fa-solid fa-check mr-1"></i> Keldi</span>
+              {% elif record.status == 'absent' %}
+                <span class="bg-red-500/10 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full"><i class="fa-solid fa-xmark mr-1"></i> Kelmadi</span>
+              {% else %}
+                <span class="bg-yellow-500/10 text-yellow-400 text-xs font-bold px-3 py-1.5 rounded-full"><i class="fa-solid fa-clock mr-1"></i> Kechikdi</span>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-center py-8">
+            <i class="fa-solid fa-calendar-check text-4xl text-gray-600 mb-3"></i>
+            <p class="text-gray-400">Bugun uchun hech qanday davomat belgilanmagan.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Lessons Modal -->
+  <div id="lessonsModal" class="hidden fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+    <div class="card-bg w-full max-w-3xl rounded-2xl border border-gray-700 flex flex-col max-h-[80vh]">
+      <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-white">Bugungi Darslar Jadvali</h2>
+          <p class="text-sm text-gray-400">Faqat sizga tegishli bugungi darslar ro'yxati</p>
+        </div>
+        <button onclick="document.getElementById('lessonsModal').classList.add('hidden')" class="text-gray-400 hover:text-white transition p-2">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto">
+        <div class="space-y-4">
+          {% for lesson in today_lessons %}
+          <div class="badge-bg p-5 rounded-2xl border border-gray-800 flex flex-col md:flex-row md:items-center justify-between transition hover:border-gray-600">
+            <div class="flex items-center space-x-4 mb-4 md:mb-0">
+              <div class="w-12 h-12 rounded-xl bg-mint/10 border border-mint/20 flex flex-col items-center justify-center">
+                <span class="text-mint font-bold text-lg leading-none">{{ lesson.group.lesson_start_time|time:"H:i" }}</span>
+              </div>
+              <div>
+                <h4 class="text-white font-bold text-[16px]">{{ lesson.group.name }}</h4>
+                <p class="text-gray-400 text-xs">{{ lesson.title }} • {{ lesson.group.course.title }}</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              {% if lesson.started_at %}
+                <span class="bg-mint/10 text-mint text-[10px] font-bold uppercase px-3 py-1.5 rounded-lg border border-mint/20">
+                  <i class="fa-solid fa-play mr-2 text-[8px]"></i>Boshlangan: {{ lesson.started_at|time:"H:i" }}
+                </span>
+              {% else %}
+                <a href="{% url 'courses:start_lesson' lesson.id %}" class="bg-mint text-black px-6 py-2 rounded-xl text-xs font-bold hover:shadow-[0_0_15px_rgba(0,230,153,0.4)] transition uppercase tracking-wider">
+                  Boshlash
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-center py-12">
+            <i class="fa-solid fa-calendar-day text-4xl text-gray-600 mb-4 opacity-20"></i>
+            <p class="text-gray-400">Bugunga darslar rejalashtirilmagan.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Groups Modal -->
+  <div id="myGroupsModal" class="hidden fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+    <div class="card-bg w-full max-w-2xl rounded-2xl border border-gray-700 flex flex-col max-h-[85vh]">
+      <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-white">Sizning Guruhlaringiz</h2>
+          <p class="text-sm text-gray-400">Barcha faol va yakunlangan guruhlar</p>
+        </div>
+        <button onclick="document.getElementById('myGroupsModal').classList.add('hidden')" class="text-gray-400 hover:text-white transition p-2">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto">
+        <div class="space-y-4">
+          {% for item in groups_with_stats %}
+          <div class="badge-bg p-5 rounded-2xl border border-gray-800 transition hover:border-mint/30">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h4 class="text-white font-bold text-lg">{{ item.group.name }}</h4>
+                <p class="text-gray-500 text-sm italic">{{ item.group.course.title }}</p>
+                <div class="flex gap-4 mt-2">
+                   <span class="text-xs text-mint/80 bg-mint/5 px-2 py-1 rounded border border-mint/10"><i class="fa-solid fa-users mr-1"></i> {{ item.students_count }} talaba</span>
+                   <span class="text-xs text-blue-400/80 bg-blue-400/5 px-2 py-1 rounded border border-blue-400/10"><i class="fa-solid fa-calendar mr-1"></i> {{ item.group.get_schedule_type_display }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <a href="{% url 'exams:list' item.group.id %}" class="bg-gray-800/50 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl text-[10px] font-bold uppercase text-center transition">Imtihon</a>
+              <a href="{% url 'homework:list' item.group.id %}" class="bg-gray-800/50 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl text-[10px] font-bold uppercase text-center transition">Vazifa</a>
+              <a href="{% url 'attendance:list' item.group.id %}" class="bg-mint/10 hover:bg-mint/20 text-mint py-2.5 rounded-xl text-[10px] font-bold uppercase text-center transition">Tarix</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Davomat Selection Modal -->
+  <div id="davomatSelectionModal" class="hidden fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+    <div class="card-bg w-full max-w-2xl rounded-2xl border border-gray-700 flex flex-col max-h-[85vh]">
+      <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-bold text-white">Davomat Belgilash</h2>
+          <p class="text-sm text-gray-400">Qaysi guruhga davomat kiritmoqchisiz?</p>
+        </div>
+        <button onclick="document.getElementById('davomatSelectionModal').classList.add('hidden')" class="text-gray-400 hover:text-white transition p-2">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for item in groups_with_stats %}
+          <div class="badge-bg p-5 rounded-2xl border border-gray-800 flex flex-col justify-between hover:border-mint/50 transition cursor-default">
+            <div class="mb-4">
+              <h4 class="text-white font-bold">{{ item.group.name }}</h4>
+              <p class="text-gray-500 text-[10px]">{{ item.group.lesson_start_time|time:"H:i" }} da boshlanadi</p>
+            </div>
+            <div class="flex flex-col gap-2">
+              <a href="{% url 'attendance:mark' item.group.id %}" class="w-full bg-mint text-black py-2.5 rounded-xl text-xs font-bold uppercase text-center hover:bg-[#00cc88] transition">
+                <i class="fa-solid fa-pen-nib mr-1"></i> Belgilash
+              </a>
+              <a href="{% url 'attendance:list' item.group.id %}" class="w-full bg-gray-800 text-gray-300 py-2.5 rounded-xl text-xs font-bold uppercase text-center hover:bg-gray-700 transition">
+                <i class="fa-solid fa-clock-rotate-left mr-1"></i> Tarix
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </div>
 
