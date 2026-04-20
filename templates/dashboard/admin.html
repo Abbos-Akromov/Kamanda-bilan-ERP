@@ -38,7 +38,7 @@
   <!-- Top Navigation -->
   <nav class="border-b border-gray-700 p-4 shrink-0 flex flex-col md:flex-row md:items-center justify-between mt-1">
     <div class="flex items-center space-x-2">
-      <span class="text-2xl font-bold"><span class="text-mint">LMS</span> <span class="text-white">Admin</span></span>
+      <span class="text-2xl font-bold"><span class="text-mint">YOUR</span> <span class="text-white">COMPANY</span></span>
     </div>
     
     <!-- Search bar top right -->
@@ -60,12 +60,16 @@
       <button onclick="document.getElementById('userModal').classList.add('show')" class="border border-gray-600 text-gray-200 hover:text-white hover:border-gray-400 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer flex items-center shadow-sm">
         + Foydalanuvchi qo'shish
       </button>
-      <div class="flex items-center space-x-3 bg-transparent pr-2 rounded-full cursor-pointer">
-        <div class="bg-[#fef3c7] w-9 h-9 rounded-full flex items-center justify-center font-bold text-yellow-800 text-sm">
-          {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|default:''|upper }}
-        </div>
-        <span class="text-gray-300 font-medium text-sm">{{ user.first_name|default:user.username }}</span>
-      </div>
+      <a href="{% url 'auth:profile' %}" class="flex items-center space-x-3 bg-transparent pr-2 rounded-full cursor-pointer border border-transparent hover:border-gray-700 hover:bg-[#252830] transition p-1">
+        {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="w-9 h-9 rounded-full object-cover" alt="Avatar">
+        {% else %}
+          <div class="bg-[#fef3c7] w-9 h-9 rounded-full flex items-center justify-center font-bold text-yellow-800 text-sm">
+            {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|default:''|upper }}
+          </div>
+        {% endif %}
+        <span class="text-gray-300 font-medium text-sm px-1">{{ user.first_name|default:user.username }}</span>
+      </a>
     </div>
   </nav>
 
@@ -112,6 +116,10 @@
         <a href="{% url 'chat:list' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-comments"></i>
           <span>Messenger</span>
+        </a>
+        <a href="{% url 'dashboard:graduated_students' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>Bitiruvchilar</span>
         </a>
         
         <a href="{% url 'auth:logout' %}" class="flex items-center space-x-3 text-red-400 hover:text-red-300 hover:bg-[#252830] px-4 py-3 rounded-lg font-medium mt-12 transition">
@@ -219,6 +227,9 @@
                  </a>
                  <a href="{% url 'payments:dashboard' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
                    <i class="fa-solid fa-dollar-sign opacity-70 w-5 text-center"></i> <span>To'lov tekshirish</span>
+                 </a>
+                 <a href="{% url 'dashboard:graduated_students' %}" class="block w-full text-left bg-transparent border border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white px-4 py-3 rounded-xl transition flex items-center space-x-3 text-sm font-medium">
+                   <i class="fa-solid fa-graduation-cap opacity-70 w-5 text-center"></i> <span>Bitiruvchilar ro'yxati</span>
                  </a>
               </div>
             </div>
@@ -340,13 +351,26 @@
                  <button onclick="document.getElementById('courseModal').style.display='flex'" class="bg-[#252830] text-mint hover:text-white border border-mint/50 px-4 py-2 rounded-lg text-sm font-bold transition">
                    + Yangi kurs qo'shish
                  </button>
-                 <button onclick="document.getElementById('groupModal').style.display='flex'" class="bg-[#252830] text-gray-300 hover:text-white border border-gray-600 px-4 py-2 rounded-lg text-sm font-bold transition">
+                 <button onclick="document.getElementById('groupModal').style.display='flex'" class="bg-mint text-black hover:bg-[#00cc88] px-4 py-2 rounded-lg text-sm font-bold transition shadow-lg">
                    + Yangi guruh ochish
                  </button>
                </div>
             </div>
-            
-            <div class="overflow-x-auto">
+
+            <!-- Kurslar Ro'yxati (Visual aid to avoid confusion) -->
+            <div class="mb-8 overflow-x-auto pb-2">
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-3">Mavjud Kurslar</p>
+                <div class="flex space-x-3">
+                    {% for c in all_courses %}
+                    <div class="badge-bg px-4 py-2 rounded-xl border border-gray-700 flex items-center space-x-2 shrink-0">
+                        <i class="fa-solid fa-book text-mint text-xs"></i>
+                        <span class="text-white text-xs font-bold">{{ c.title }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-600 text-xs italic">Hech qanday kurs topilmadi.</p>
+                    {% endfor %}
+                </div>
+            </div>
                <table class="w-full text-left border-collapse">
                   <thead>
                      <tr class="border-b border-gray-600 text-gray-400 text-sm">

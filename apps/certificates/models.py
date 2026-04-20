@@ -10,3 +10,5 @@ class Certificate(models.Model):
     pdf_file = models.FileField(upload_to='certificates/')
     qr_code = models.ImageField(upload_to='qr_codes/')
     verification_code = models.UUIDField(default=uuid.uuid4, unique=True)
+    is_active = models.BooleanField(default=True)
+

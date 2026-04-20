@@ -11,8 +11,8 @@ from decimal import Decimal
 import uuid
 
 
-def send_notification(user, title, body, notif_type='payment_reminder'):
-    Notification.objects.create(user=user, title=title, body=body, notif_type=notif_type)
+def send_notification(user, title, body, notif_type='payment_reminder', link=None):
+    Notification.objects.create(user=user, title=title, body=body, notif_type=notif_type, link=link)
 
 
 # ─────────────────────────────────────────────
@@ -131,10 +131,10 @@ def record_student_payment(request):
         remaining = course_price - enr.amount_paid
         if remaining <= 0:
             send_notification(enr.student, "To'lov tasdiqlandi ✅",
-                f"{group.course.title} kursi uchun to'lov to'liq amalga oshirildi!")
+                f"{group.course.title} kursi uchun to'lov to'liq amalga oshirildi!", link="/dashboard/student/#payment-section")
         else:
             send_notification(enr.student, "Qisman to'lov qabul qilindi",
-                f"{group.course.title} uchun {float(amount):,.0f} UZS qabul qilindi. Qolgan: {float(remaining):,.0f} UZS")
+                f"{group.course.title} uchun {float(amount):,.0f} UZS qabul qilindi. Qolgan: {float(remaining):,.0f} UZS", link="/dashboard/student/#payment-section")
 
         messages.success(request, f"{enr.student.get_full_name() or enr.student.username}: {float(amount):,.0f} UZS qabul qilindi. O'qituvchi: +{float(teacher_share):,.0f} UZS")
         return redirect('payments:dashboard')
@@ -244,6 +244,11 @@ def student_make_payment(request):
             transaction_id=f"STU-{uuid.uuid4().hex[:8]}",
             status='pending'
         )
+        
+        # Notify admins
+        admins = User.objects.filter(role='admin')
+        for admin in admins:
+            send_notification(admin, "Yangi to'lov kutilmoqda 💳", f"{request.user.get_full_name() or request.user.username} {float(amount):,.0f} UZS yubordi.", link="/payments/")
 
         messages.success(request, f"{float(amount):,.0f} UZS to'lov yuborildi. Admin tasdiqlashini kuting.")
         return redirect('dashboard:student')
@@ -299,7 +304,7 @@ def approve_payment(request, payment_id):
         a_sal.save()
     
     send_notification(enr.student, "To'lovingiz tasdiqlandi ✅", 
-                      f"{group.course.title} uchun yuborgan {float(amount):,.0f} UZS to'lovingiz admin tomonidan tasdiqlandi.")
+                      f"{group.course.title} uchun yuborgan {float(amount):,.0f} UZS to'lovingiz admin tomonidan tasdiqlandi.", link="/dashboard/student/#payment-section")
     
     messages.success(request, f"{enr.student.username} to'lovi tasdiqlandi.")
     return redirect('payments:dashboard')
@@ -312,7 +317,7 @@ def reject_payment(request, payment_id):
     payment.save()
     
     send_notification(payment.enrollment.student, "To'lov rad etildi ❌", 
-                      f"Afsuski, {float(payment.amount):,.0f} UZS miqdoridagi to'lovingiz bekor qilindi.")
+                      f"Afsuski, {float(payment.amount):,.0f} UZS miqdoridagi to'lovingiz bekor qilindi.", link="/dashboard/student/#payment-section")
     
     messages.warning(request, "To'lov rad etildi.")
     return redirect('payments:dashboard')

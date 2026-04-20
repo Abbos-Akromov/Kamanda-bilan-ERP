@@ -19,17 +19,38 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="w-full max-w-4xl bg-[#252830] p-6 md:p-8 rounded-3xl border border-gray-700 shadow-2xl">
+    <div class="w-full max-w-4xl bg-[#252830] p-6 md:p-8 rounded-3xl border border-gray-700 shadow-2xl relative overflow-hidden">
         
+        {% if not cert.is_active %}
+        <!-- Revoked Watermark -->
+        <div class="absolute inset-0 z-50 flex items-center justify-center pointer-events-none rotate-[-30deg]">
+            <p class="text-rose-500/20 text-6xl md:text-9xl font-black border-4 md:border-8 border-rose-500/20 px-8 py-4 rounded-xl md:rounded-3xl uppercase tracking-widest">
+                BEKOR QILINGAN
+            </p>
+        </div>
+        <!-- Alert Banner -->
+        <div class="mb-6 animate-bounce">
+            <div class="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-2xl flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg">DIQQAT: Ushbu sertifikat bekor qilingan!</h4>
+                    <p class="text-sm opacity-80">Ushbu sertifikat administrator tomonidan bekor qilingan va haqiqiy emas deb hisoblanadi.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <p class="text-gray-400 text-xs font-bold tracking-widest uppercase mb-4 pl-1">Sertifikat — PDF + QR Verification</p>
         
         <!-- The Main Certificate Card -->
-        <div class="cert-bg rounded-3xl p-8 md:p-14 shadow-xl mb-6">
+        <div class="cert-bg rounded-3xl p-8 md:p-14 shadow-xl mb-6 {% if not cert.is_active %}grayscale contrast-75 brightness-75{% endif %}">
             <div class="circle-1"></div>
             <div class="circle-2"></div>
             
             <div class="relative z-10 text-center">
-                <p class="text-green-200 text-sm font-bold tracking-widest uppercase mb-2">LMS Platform</p>
+                <p class="text-green-200 text-sm font-bold tracking-widest uppercase mb-2">YOUR COMPANY</p>
                 <h1 class="text-5xl md:text-6xl font-extrabold text-white mb-10 tracking-tight">SERTIFIKAT</h1>
                 
                 <p class="text-green-100 text-lg mb-2">Ushbu sertifikat</p>
@@ -77,9 +98,15 @@
         <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
             <div class="flex space-x-4">
+                {% if cert.is_active %}
                 <a href="{{ cert.pdf_file.url }}" target="_blank" class="bg-transparent border border-gray-600 hover:border-gray-400 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-xl transition flex items-center shadow-sm">
                     <i class="fa-solid fa-download mr-2"></i> PDF yuklab olish
                 </a>
+                {% else %}
+                <button disabled title="Sertifikat bekor qilingan" class="bg-gray-800 cursor-not-allowed border border-gray-700 text-gray-500 font-bold py-3 px-6 rounded-xl flex items-center shadow-sm">
+                    <i class="fa-solid fa-ban mr-2"></i> PDF yuklab olish (Bekor qilingan)
+                </button>
+                {% endif %}
                 <button onclick="navigator.clipboard.writeText(window.location.href); alert('Nusxa olindi!')" class="bg-transparent border border-gray-600 hover:border-gray-400 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-xl transition flex items-center shadow-sm">
                     <i class="fa-solid fa-share-nodes mr-2"></i> Ulashish
                 </button>
@@ -91,6 +118,7 @@
         </div>
         
     </div>
+
 
 </body>
 </html>

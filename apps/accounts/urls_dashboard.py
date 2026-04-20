@@ -19,5 +19,6 @@ urlpatterns = [
     path('group/<int:group_id>/extend-schedule/', views_dashboard.extend_lessons, name='extend_lessons'),
     path('group/<int:group_id>/update-percent/', views_dashboard.update_group_percent, name='update_group_percent'),
     path('lesson/<int:lesson_id>/update/', views_dashboard.update_lesson, name='update_lesson'),
+    path('graduated-students/', views_dashboard.graduated_students_list, name='graduated_students'),
 ]
 

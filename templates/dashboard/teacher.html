@@ -29,7 +29,7 @@
   <!-- Top Navigation -->
   <nav class="border-b border-gray-700 p-4 shrink-0 flex flex-col md:flex-row md:items-center justify-between mt-1">
     <div class="flex items-center space-x-2">
-      <span class="text-2xl font-bold"><span class="text-mint">LMS</span> <span class="text-white">Platform</span></span>
+      <span class="text-2xl font-bold"><span class="text-mint">YOUR</span> <span class="text-white">COMPANY</span></span>
     </div>
     
     <div class="flex items-center space-x-6 mt-4 md:mt-0 font-medium text-sm">
@@ -43,12 +43,16 @@
     <div class="hidden md:flex items-center space-x-4">
       <!-- Notifications Dropdown -->
       {% include 'dashboard/includes/notification_dropdown.html' %}
-      <div class="flex items-center space-x-3 bg-transparent pr-2 rounded-full cursor-pointer">
-        <div class="bg-blue-100 w-9 h-9 rounded-full flex items-center justify-center font-bold text-blue-800 text-sm">
-          {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|default:''|upper }}
-        </div>
-        <span class="text-gray-300 font-medium text-sm">{{ user.first_name|default:user.username }}</span>
-      </div>
+      <a href="{% url 'auth:profile' %}" class="flex items-center space-x-3 bg-transparent pr-2 rounded-full cursor-pointer hover:bg-[#252830] transition border border-transparent hover:border-gray-700 p-1">
+        {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="w-9 h-9 rounded-full object-cover">
+        {% else %}
+          <div class="bg-blue-100 w-9 h-9 rounded-full flex items-center justify-center font-bold text-blue-800 text-sm">
+            {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|default:''|upper }}
+          </div>
+        {% endif %}
+        <span class="text-gray-300 font-medium text-sm px-1">{{ user.first_name|default:user.username }}</span>
+      </a>
     </div>
   </nav>
 
@@ -75,6 +79,10 @@
         <a href="{% url 'chat:list' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
           <i class="fa-regular fa-message"></i>
           <span>Chat</span>
+        </a>
+        <a href="{% url 'dashboard:graduated_students' %}" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-[#252830] px-4 py-3 rounded-lg font-medium transition cursor-pointer">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>Bitiruvchilar</span>
         </a>
         
         <a href="{% url 'auth:logout' %}" class="flex items-center space-x-3 text-red-400 hover:text-red-300 hover:bg-[#252830] px-4 py-3 rounded-lg font-medium mt-12 transition">
@@ -142,8 +150,10 @@
             {% for lesson in today_lessons %}
             <div class="badge-bg p-5 rounded-2xl border border-gray-700 flex flex-col md:flex-row md:items-center justify-between transition hover:border-gray-500">
               <div class="flex items-center space-x-4 mb-4 md:mb-0">
-                <div class="w-12 h-12 rounded-xl bg-mint/10 border border-mint/20 flex flex-col items-center justify-center">
-                  <span class="text-mint font-bold text-lg leading-none">{{ lesson.group.lesson_start_time|time:"H:i" }}</span>
+                <div class="px-3 h-12 rounded-xl bg-mint/10 border border-mint/20 flex flex-col items-center justify-center min-w-[70px]">
+                  <span class="text-mint font-bold text-xs">{{ lesson.group.lesson_start_time|time:"H:i" }}</span>
+                  <div class="h-[1px] w-4 bg-mint/30 my-0.5"></div>
+                  <span class="text-mint font-medium text-[10px] opacity-80">{{ lesson.group.lesson_end_time|time:"H:i" }}</span>
                 </div>
                 <div>
                   <h4 class="text-white font-bold text-[16px]">{{ lesson.group.name }}</h4>
@@ -154,9 +164,15 @@
               <div class="flex items-center space-x-2">
                 {% if lesson.started_at %}
                   <div class="flex items-center space-x-2">
-                    <span class="bg-mint/10 text-mint text-[10px] font-bold uppercase px-3 py-1.5 rounded-lg border border-mint/20 flex items-center">
-                      <i class="fa-solid fa-play mr-2 text-[8px]"></i>Boshlangan: {{ lesson.started_at|time:"H:i" }}
-                    </span>
+                    {% if not lesson.ended_at %}
+                      <a href="{% url 'courses:end_lesson' lesson.id %}" class="bg-red-500/10 text-red-500 text-[10px] font-bold uppercase px-3 py-1.5 rounded-lg border border-red-500/20 flex items-center hover:bg-red-500 hover:text-white transition">
+                        <i class="fa-solid fa-stop-circle mr-2 text-[10px]"></i>Darsni Tugatish
+                      </a>
+                    {% else %}
+                      <span class="bg-gray-800 text-gray-400 text-[10px] font-bold uppercase px-3 py-1.5 rounded-lg border border-gray-700 flex items-center">
+                        <i class="fa-solid fa-check-circle mr-2 text-[10px]"></i>Yakunlandi
+                      </span>
+                    {% endif %}
                     <a href="{% url 'attendance:mark' lesson.group.id %}" class="bg-gray-800 border border-gray-700 text-white px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-700 transition">
                       Davomat
                     </a>
@@ -186,7 +202,7 @@
               <div class="flex justify-between items-start mb-3">
                 <div>
                   <h5 class="text-white font-bold text-sm">{{ item.group.name }}</h5>
-                  <p class="text-gray-500 text-[10px]">{{ item.group.get_schedule_type_display }} • {{ item.group.lesson_start_time|time:"H:i" }}</p>
+                  <p class="text-gray-500 text-[10px]">{{ item.group.get_schedule_type_display }} • {{ item.group.lesson_start_time|time:"H:i" }} - {{ item.group.lesson_end_time|time:"H:i" }}</p>
                 </div>
                 <div class="text-right">
                   <span class="text-[10px] text-gray-400 bg-gray-900 px-2 py-0.5 rounded border border-gray-700 block mb-1">{{ item.students_count }} talaba</span>
@@ -198,6 +214,14 @@
               <div class="w-full h-1 bg-gray-800 rounded-full overflow-hidden mb-4">
                 <div class="h-full bg-mint shadow-[0_0_8px_rgba(0,230,153,0.4)] transition-all duration-500" style="width:{{ item.progress }}%"></div>
               </div>
+
+              {% if item.next_lesson %}
+              <div class="mb-3">
+                <a href="{% url 'courses:start_lesson' item.next_lesson.id %}" class="w-full flex items-center justify-center gap-2 bg-mint text-black py-2 rounded-xl text-xs font-bold hover:shadow-[0_0_15px_rgba(0,230,153,0.4)] transition uppercase tracking-wider">
+                  <i class="fa-solid fa-play"></i> Darsni Boshlash ({{ item.next_lesson.order }}-dars)
+                </a>
+              </div>
+              {% endif %}
 
               <div class="flex space-x-2">
                 <a href="javascript:void(0)" onclick="showPreview('{% url 'dashboard:group_preview' item.group.id %}', '{{ item.group.name }} — Jadval')" class="flex-1 bg-mint/10 text-mint py-1.5 rounded-lg text-[9px] font-bold uppercase text-center hover:bg-mint/20">Jadval</a>
@@ -364,8 +388,10 @@
           {% for lesson in today_lessons %}
           <div class="badge-bg p-5 rounded-2xl border border-gray-800 flex flex-col md:flex-row md:items-center justify-between transition hover:border-gray-600">
             <div class="flex items-center space-x-4 mb-4 md:mb-0">
-              <div class="w-12 h-12 rounded-xl bg-mint/10 border border-mint/20 flex flex-col items-center justify-center">
-                <span class="text-mint font-bold text-lg leading-none">{{ lesson.group.lesson_start_time|time:"H:i" }}</span>
+              <div class="px-3 h-12 rounded-xl bg-mint/10 border border-mint/20 flex flex-col items-center justify-center min-w-[70px]">
+                <span class="text-mint font-bold text-xs">{{ lesson.group.lesson_start_time|time:"H:i" }}</span>
+                <div class="h-[1px] w-4 bg-mint/30 my-0.5"></div>
+                <span class="text-mint font-medium text-[10px] opacity-80">{{ lesson.group.lesson_end_time|time:"H:i" }}</span>
               </div>
               <div>
                 <h4 class="text-white font-bold text-[16px]">{{ lesson.group.name }}</h4>
@@ -451,7 +477,7 @@
           <div class="badge-bg p-5 rounded-2xl border border-gray-800 flex flex-col justify-between hover:border-mint/50 transition cursor-default">
             <div class="mb-4">
               <h4 class="text-white font-bold">{{ item.group.name }}</h4>
-              <p class="text-gray-500 text-[10px]">{{ item.group.lesson_start_time|time:"H:i" }} da boshlanadi</p>
+              <p class="text-gray-500 text-[10px]">{{ item.group.lesson_start_time|time:"H:i" }} - {{ item.group.lesson_end_time|time:"H:i" }}</p>
             </div>
             <div class="flex flex-col gap-2">
               <a href="{% url 'attendance:mark' item.group.id %}" class="w-full bg-mint text-black py-2.5 rounded-xl text-xs font-bold uppercase text-center hover:bg-[#00cc88] transition">

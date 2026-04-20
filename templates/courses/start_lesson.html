@@ -50,14 +50,17 @@
           </div>
           <div class="flex items-center gap-3">
             <i class="fa-solid fa-clock text-gray-500"></i>
-            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Vaqt: {{ lesson.group.lesson_start_time }}</span>
+            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Vaqt: {% if lesson.start_time %}{{ lesson.start_time|time:"H:i" }}{% else %}{{ lesson.group.lesson_start_time|time:"H:i" }}{% endif %}</span>
           </div>
         </div>
 
-        <div class="space-y-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Dars Mavzusi (Tuzatishingiz mumkin)</label>
-          <input type="text" name="title" value="{{ lesson.title }}" required 
-                 class="w-full bg-black/40 border border-white/5 rounded-2xl py-5 px-6 text-white text-lg font-bold focus:outline-none focus:border-mint transition shadow-inner">
+        <div class="space-y-3">
+          <label class="text-[10px] font-black uppercase tracking-widest text-mint ml-1 flex items-center gap-2">
+            <i class="fa-solid fa-pencil"></i> Dars Mavzusini Kiriting (Mavzu o'quvchilarda ko'rinadi)
+          </label>
+          <input type="text" name="title" value="{{ lesson.title|default:'' }}" required autofocus
+                 placeholder="Bugungi dars mavzusi nima?"
+                 class="w-full bg-black/40 border-2 border-mint/20 rounded-2xl py-6 px-6 text-white text-xl font-bold focus:outline-none focus:border-mint transition shadow-[0_0_40px_rgba(0,230,153,0.05)] placeholder:text-gray-700">
         </div>
       </div>
 

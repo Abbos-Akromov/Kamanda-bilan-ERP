@@ -54,11 +54,11 @@ def send_broadcast(request):
 @login_required
 def mark_notification_read(request, pk):
     notif = get_object_or_404(Notification, id=pk, user=request.user)
-    notif.is_read = True
-    notif.save()
+    link = notif.link
+    notif.delete()
     
     # If the notification has a link (e.g., to a chat room), redirect there
-    if notif.link:
-        return redirect(notif.link)
+    if link:
+        return redirect(link)
         
     return redirect(request.META.get('HTTP_REFERER', '/'))

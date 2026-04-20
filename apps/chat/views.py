@@ -2,7 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Max, Value
 from django.db.models.functions import Coalesce, Greatest
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST, require_http_methods
 import datetime
+import json
 from django.contrib import messages
 
 from apps.courses.models import Group, Enrollment
@@ -97,3 +100,37 @@ def chat_group(request, group_id):
         'history': history,
         'mode': 'group'
     })
+
+
+@login_required
+@require_http_methods(["POST", "DELETE"])
+def message_delete(request, msg_id):
+    """Foydalanuvchi o'z xabarini o'chiradi (soft delete)"""
+    msg = get_object_or_404(Message, id=msg_id)
+    if msg.sender != request.user:
+        return JsonResponse({'error': 'Ruxsat yo\'q'}, status=403)
+    msg.is_deleted = True
+    msg.content = 'Xabar o\'chirildi'
+    msg.save()
+    return JsonResponse({'success': True, 'msg_id': msg_id})
+
+
+@login_required
+@require_POST
+def message_edit(request, msg_id):
+    """Foydalanuvchi o'z xabarini tahrirlaydi"""
+    msg = get_object_or_404(Message, id=msg_id)
+    if msg.sender != request.user:
+        return JsonResponse({'error': 'Ruxsat yo\'q'}, status=403)
+    if msg.is_deleted:
+        return JsonResponse({'error': 'O\'chirilgan xabarni tahrirlash mumkin emas'}, status=400)
+    try:
+        body = json.loads(request.body)
+        new_content = body.get('content', '').strip()
+    except (json.JSONDecodeError, AttributeError):
+        new_content = request.POST.get('content', '').strip()
+    if not new_content:
+        return JsonResponse({'error': 'Xabar bo\'sh bo\'lishi mumkin emas'}, status=400)
+    msg.content = new_content
+    msg.save()
+    return JsonResponse({'success': True, 'msg_id': msg_id, 'content': new_content})
