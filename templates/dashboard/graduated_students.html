@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto mb-20 animate-fade-in">
+    <!-- Breadcrumbs -->
+    <div class="flex items-center space-x-2 text-xs text-gray-500 mb-6 font-medium uppercase tracking-wider">
+        <a href="{% url 'dashboard:home' %}" class="hover:text-[#00e699] transition">Asosiy panel</a>
+        <i class="fa-solid fa-chevron-right text-[8px]"></i>
+        <span class="text-gray-400">Bitiruvchilar ro'yxati</span>
+    </div>
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'dashboard:home' %}" class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white transition flex items-center justify-center shrink-0" title="Orqaga qaytish">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-3xl font-black text-white tracking-tight">Bitiruvchilar Ro'yxati</h1>
+                <p class="text-gray-400 text-sm mt-1">Kurslarni muvaffaqiyatli yakunlagan o'quvchilar</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+             <div class="bg-[#252830] border border-gray-700 px-4 py-2 rounded-xl text-sm font-bold text-mint">
+                Jami: {{ graduates.count }} ta bitiruvchi
+             </div>
+        </div>
+    </div>
+
+
+    <div class="bg-[#252830] rounded-3xl border border-gray-700 overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-gray-700 bg-[#1a1c23]/30 text-gray-400 text-[10px] sm:text-xs font-black uppercase tracking-widest">
+                        <th class="py-5 px-6">O'quvchi</th>
+                        <th class="py-5 px-6">Kurs va Guruh</th>
+                        <th class="py-5 px-6 text-center">Tugatilgan sana</th>
+                        <th class="py-5 px-6 text-right">Sertifikat</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/50">
+                    {% for enr in graduates %}
+                    <tr class="hover:bg-[#1a1c23]/50 transition-all group">
+                        <td class="py-5 px-6">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center font-bold text-white text-sm">
+                                    {{ enr.student.first_name|first|default:enr.student.username|first|upper }}
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold group-hover:text-[#00e699] transition-colors">{{ enr.student.get_full_name|default:enr.student.username }}</h4>
+                                    <p class="text-gray-500 text-xs">{{ enr.student.email }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-5 px-6">
+                            <div>
+                                <p class="text-gray-200 font-medium text-sm">{{ enr.group.course.title }}</p>
+                                <p class="text-mint text-[10px] font-bold uppercase tracking-wider mt-0.5">{{ enr.group.name }}</p>
+                            </div>
+                        </td>
+                        <td class="py-5 px-6 text-center">
+                            <span class="text-gray-400 text-sm italic">
+                                {{ enr.enrolled_at|date:"d.m.Y" }}
+                            </span>
+                        </td>
+                        <td class="py-5 px-6 text-right">
+                            <div class="flex items-center justify-end">
+                                <a href="{% url 'certificates:issue' %}?student={{ enr.student.id }}&course={{ enr.group.course.id }}" 
+                                   class="flex items-center space-x-2 bg-[#1a1c23] border border-gray-700 hover:border-mint text-gray-300 hover:text-mint px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm">
+                                    <i class="fa-solid fa-award"></i>
+                                    <span>Ko'rish</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-20 text-center">
+                            <div class="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center mx-auto mb-4 border border-gray-700">
+                                <i class="fa-solid fa-graduation-cap text-gray-600 text-2xl"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium">Hozircha bitiruvchilar mavjud emas.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

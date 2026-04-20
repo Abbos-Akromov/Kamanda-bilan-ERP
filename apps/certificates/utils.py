@@ -4,6 +4,15 @@ def generate_certificate(student, course):
     from reportlab.lib.pagesizes import A4, landscape
     from django.core.files.base import ContentFile
     from apps.certificates.models import Certificate
+    from apps.courses.models import Enrollment
+
+    # Kursni tugatish mantiqi
+    Enrollment.objects.filter(student=student, group__course=course, status='approved').update(status='completed')
+
+    # Agar allaqachon sertifikat berilgan bo'lsa, o'shani o'zini qaytaramiz (dublikat bo'lmasligi uchun)
+    existing_cert = Certificate.objects.filter(student=student, course=course).first()
+    if existing_cert:
+        return existing_cert
 
     cert = Certificate.objects.create(student=student, course=course, verification_code=uuid.uuid4())
     qr_url = f"https://lms.uz/verify/{cert.verification_code}/"
@@ -18,6 +27,9 @@ def generate_certificate(student, course):
     c.setFillColorRGB(0.11, 0.62, 0.46)
     c.rect(0, 0, w, h, fill=1)
     c.setFillColorRGB(1, 1, 1)
+    c.setFont('Helvetica-Bold', 20)
+    c.drawCentredString(w/2, h-60, 'YOUR COMPANY')
+    
     c.setFont('Helvetica-Bold', 48)
     c.drawCentredString(w/2, h-150, 'SERTIFIKAT')
     c.setFont('Helvetica', 24)

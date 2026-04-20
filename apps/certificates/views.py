@@ -19,6 +19,22 @@ def issue_certificate(request):
     courses = Course.objects.filter(is_active=True)
     return render(request, 'certificates/issue.html', {'students': students, 'courses': courses})
 
+@role_required('admin')
+def admin_certificate_list(request):
+    from apps.certificates.models import Certificate
+    certificates = Certificate.objects.all().order_by('-issued_at')
+    return render(request, 'certificates/list.html', {'certificates': certificates})
+
+@role_required('admin')
+def revoke_certificate(request, pk):
+    from apps.certificates.models import Certificate
+    cert = get_object_or_404(Certificate, pk=pk)
+    cert.is_active = not cert.is_active
+    cert.save()
+    status = "faollashtirildi" if cert.is_active else "bekor qilindi"
+    messages.success(request, f'Sertifikat muvaffaqiyatli {status}.')
+    return redirect('certificates:admin_list')
+
 def verify_certificate(request, code):
     from apps.certificates.models import Certificate
     cert = get_object_or_404(Certificate, verification_code=code)
@@ -27,3 +43,4 @@ def verify_certificate(request, code):
     admin_user = User.objects.filter(role='admin').first()
     
     return render(request, 'certificates/verify.html', {'cert': cert, 'admin': admin_user})
+

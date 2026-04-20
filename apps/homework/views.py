@@ -7,6 +7,14 @@ from apps.accounts.decorators import role_required
 @role_required('student')
 def submit_homework(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
+    
+    # Kurs tugallanganligini tekshirish
+    from apps.courses.models import Enrollment
+    enrollment = Enrollment.objects.filter(student=request.user, group=lesson.group).first()
+    if enrollment and enrollment.status == 'completed':
+        messages.error(request, 'Kurs yakunlangan. Vazifa yuborish imkoniyati yopiq.')
+        return redirect('courses:lesson_detail', lesson_id=lesson.id)
+
     if request.method == 'POST':
         file = request.FILES.get('file')
         github_link = request.POST.get('github_link', '').strip()

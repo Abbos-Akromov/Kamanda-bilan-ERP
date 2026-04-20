@@ -35,7 +35,7 @@ class Group(models.Model):
     assistant_percent = models.IntegerField(default=15)
 
 class Enrollment(models.Model):
-    STATUS = [('pending','Pending'),('approved','Approved'),('rejected','Rejected')]
+    STATUS = [('pending','Pending'),('approved','Approved'),('rejected','Rejected'),('completed','Completed')]
     student = models.ForeignKey(User, on_delete=models.PROTECT)
     group = models.ForeignKey(Group, on_delete=models.PROTECT)
     status = models.CharField(max_length=20, choices=STATUS, default='pending')
@@ -72,6 +72,8 @@ class Lesson(models.Model):
     homework_video = models.FileField(upload_to='lessons/homework/videos/', null=True, blank=True)
     homework_image = models.ImageField(upload_to='lessons/homework/images/', null=True, blank=True)
     date = models.DateField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     order = models.IntegerField(default=0)

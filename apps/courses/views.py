@@ -55,6 +55,14 @@ def enroll_course(request, course_id):
 def lesson_list(request, group_id):
     group = get_object_or_404(Group, id=group_id)
     lessons = Lesson.objects.filter(group=group).order_by('order')
+    
+    if request.user.role == 'student':
+        from apps.homework.models import Homework
+        # O'quvchining ushbu guruhdagi barcha topshirgan vazifalarini olish
+        user_homeworks = {h.lesson_id: h for h in Homework.objects.filter(student=request.user, lesson__group=group)}
+        for lesson in lessons:
+            lesson.user_hw = user_homeworks.get(lesson.id)
+
     return render(request, 'courses/lesson_list.html', {'group': group, 'lessons': lessons})
 
 @role_required('teacher', 'admin')
@@ -86,9 +94,15 @@ from datetime import datetime, timedelta
 def lesson_detail(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
     user_homework = None
+    enrollment = None
     if request.user.is_authenticated and request.user.role == 'student':
         user_homework = Homework.objects.filter(student=request.user, lesson=lesson).first()
-    return render(request, 'courses/lesson_detail.html', {'lesson': lesson, 'user_homework': user_homework})
+        enrollment = Enrollment.objects.filter(student=request.user, group=lesson.group).first()
+    return render(request, 'courses/lesson_detail.html', {
+        'lesson': lesson, 
+        'user_homework': user_homework,
+        'enrollment': enrollment
+    })
 
 @role_required('teacher', 'admin', 'assistant')
 def start_lesson(request, lesson_id):
@@ -100,10 +114,11 @@ def start_lesson(request, lesson_id):
     if request.method == 'POST':
         now = timezone.localtime()
         # Combine date and time, make it aware
-        scheduled_datetime = timezone.make_aware(datetime.combine(lesson.date, lesson.group.lesson_start_time))
+        lesson_start_time = lesson.start_time if lesson.start_time else lesson.group.lesson_start_time
+        scheduled_datetime = timezone.make_aware(datetime.combine(lesson.date, lesson_start_time))
         
         if scheduled_datetime > now:
-            messages.error(request, f"Darsni faqat dars vaqtida ({lesson.group.lesson_start_time}) boshlash mumkin.")
+            messages.error(request, f"Darsni faqat dars vaqtida ({lesson_start_time}) boshlash mumkin.")
             return render(request, 'courses/start_lesson.html', {'lesson': lesson})
             
         new_title = request.POST.get('title', '').strip()
@@ -139,5 +154,61 @@ def end_lesson(request, lesson_id):
         
         messages.success(request, f"'{lesson.title}' muvaffaqiyatli yakunlandi va vazifa yuborildi.")
         return redirect('dashboard:teacher')
-        
+
     return render(request, 'courses/end_lesson.html', {'lesson': lesson})
+
+
+@role_required('admin')
+def lesson_reschedule(request, lesson_id):
+    """Admin bitta darsni boshqa sana/vaqtga ko'chiradi"""
+    lesson = get_object_or_404(Lesson, id=lesson_id)
+
+    if request.method == 'POST':
+        new_date = request.POST.get('new_date', '').strip()
+        new_start_time = request.POST.get('new_start_time', '').strip()
+        new_end_time = request.POST.get('new_end_time', '').strip()
+
+        errors = []
+        if not new_date:
+            errors.append("Yangi sana majburiy")
+        if not new_start_time:
+            errors.append("Boshlanish vaqti majburiy")
+
+        if errors:
+            return render(request, 'courses/lesson_reschedule.html', {
+                'lesson': lesson,
+                'errors': errors
+            })
+
+        from datetime import date, time
+        try:
+            lesson.date = date.fromisoformat(new_date)
+        except ValueError:
+            return render(request, 'courses/lesson_reschedule.html', {
+                'lesson': lesson,
+                'errors': ["Sana formati noto'g'ri (YYYY-MM-DD)"]
+            })
+
+        if new_start_time:
+            try:
+                h, m = new_start_time.split(':')
+                lesson.start_time = time(int(h), int(m))
+            except Exception:
+                pass
+
+        if new_end_time:
+            try:
+                h, m = new_end_time.split(':')
+                lesson.end_time = time(int(h), int(m))
+            except Exception:
+                pass
+
+        lesson.save(update_fields=['date', 'start_time', 'end_time'])
+
+        messages.success(
+            request,
+            f"'{lesson.title}' darsi {new_date} sanasiga {new_start_time} vaqtiga ko'chirildi."
+        )
+        return redirect('courses:lesson_list', group_id=lesson.group_id)
+
+    return render(request, 'courses/lesson_reschedule.html', {'lesson': lesson})

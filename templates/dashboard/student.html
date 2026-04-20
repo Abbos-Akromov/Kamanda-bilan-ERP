@@ -6,6 +6,7 @@
   <title>Student Dashboard - LMS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    html { scroll-behavior: smooth; }
     body { background-color: #1a1c23; color: #e2e8f0; font-family: Inter, sans-serif; }
     .card-bg { background-color: #252830; }
     .badge-bg { background-color: #1a1c23; }
@@ -23,7 +24,7 @@
   <!-- Top Navigation -->
   <nav class="border-b border-gray-700 p-4 shrink-0 flex flex-col md:flex-row md:items-center justify-between">
     <div class="flex items-center space-x-2">
-      <span class="text-2xl font-bold"><span class="text-mint">LMS</span> <span class="text-white">Platform</span></span>
+      <span class="text-2xl font-bold"><span class="text-mint">YOUR</span> <span class="text-white">COMPANY</span></span>
     </div>
     
     <div class="flex items-center space-x-6 mt-4 md:mt-0 font-medium text-sm">
@@ -32,18 +33,25 @@
       <a href="{% if active_enrollment %}{% url 'courses:lesson_list' active_enrollment.group.id %}{% else %}#{% endif %}" class="text-gray-400 hover:text-gray-200">Darslar</a>
       <a href="{% if active_enrollment %}{% url 'homework:list' active_enrollment.group.id %}{% else %}#{% endif %}" class="text-gray-400 hover:text-gray-200">Uy vazifalari</a>
       <a href="{% if active_enrollment %}{% url 'exams:list' active_enrollment.group.id %}{% else %}#{% endif %}" class="text-gray-400 hover:text-gray-200">Natijalar</a>
-      <a href="{% url 'payments:dashboard' %}" class="text-gray-400 hover:text-gray-200">To'lovlar</a>
+      <a href="#payment-section" class="text-gray-400 hover:text-gray-200">To'lovlar</a>
+      {% if certificates %}
+      <a href="#certificate-section" class="text-gray-400 hover:text-gray-200">Sertifikatlar</a>
+      {% endif %}
     </div>
 
     <!-- User Profile right -->
     <div class="hidden md:flex items-center space-x-4">
       {% include 'dashboard/includes/notification_dropdown.html' %}
-      <div class="flex items-center space-x-2 bg-[#252830] pr-4 rounded-full border border-gray-700 cursor-pointer">
-        <div class="bg-mint-soft w-10 h-10 rounded-full flex items-center justify-center font-bold text-[#047857]">
-          {{ user.first_name|first|default:user.username|first|upper }}
-        </div>
+      <a href="{% url 'auth:profile' %}" class="flex items-center space-x-2 bg-[#252830] pr-4 rounded-full border border-gray-700 cursor-pointer hover:border-[#00e699] transition">
+        {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="w-10 h-10 rounded-full object-cover">
+        {% else %}
+          <div class="bg-mint-soft w-10 h-10 rounded-full flex items-center justify-center font-bold text-[#047857]">
+            {{ user.first_name|first|default:user.username|first|upper }}
+          </div>
+        {% endif %}
         <span class="text-white font-medium pl-1">{{ user.get_full_name|default:user.username }}</span>
-      </div>
+      </a>
     </div>
   </nav>
 
@@ -101,9 +109,9 @@
              </p>
            </div>
          </div>
-         <a href="{% url 'payments:dashboard' %}" class="relative z-10 bg-white text-red-900 font-extrabold px-8 py-4 rounded-2xl hover:bg-red-50 transition shadow-xl uppercase tracking-wider text-sm flex items-center gap-2">
+         <a href="#payment-section" class="relative z-10 bg-white text-red-900 font-extrabold px-8 py-4 rounded-2xl hover:bg-red-50 transition shadow-xl uppercase tracking-wider text-sm flex items-center gap-2">
            <span>To'lov bo'limiga o'tish</span>
-           <i class="fa-solid fa-arrow-right"></i>
+           <i class="fa-solid fa-arrow-down"></i>
          </a>
       </div>
       {% endif %}
@@ -158,7 +166,7 @@
           <div class="space-y-4">
              <!-- Static mockup representation of today's classes to match UI -->
              <div class="bg-mint-soft p-4 rounded-xl border border-green-200">
-               <p class="text-xs font-bold text-green-900 mb-1">10:00 — Dars</p>
+               <p class="text-xs font-bold text-green-900 mb-1">10:00 — 11:30 | Dars</p>
                <p class="text-[#047857] font-medium leading-tight">Python OOP asoslari</p>
              </div>
              <div class="bg-[#fef3c7] p-4 rounded-xl border border-yellow-200">
@@ -197,11 +205,23 @@
                 <p class="text-gray-400 text-xs mt-0.5">{{ lesson.get_lesson_type_display }} • Dars tartibi: {{ lesson.order }}</p>
               </div>
             </div>
-            <div>
+            <div class="flex items-center gap-2">
+               <!-- Ko'rildi/Yangi -->
                {% if forloop.first %}
-                  <span class="bg-white text-gray-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm">Yangi</span>
+                  <span class="bg-white text-gray-800 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">Yangi</span>
                {% else %}
-                  <span class="bg-white text-gray-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm">Ko'rildi</span>
+                  <span class="bg-white text-gray-800 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">Ko'rildi</span>
+               {% endif %}
+
+               <!-- Vazifa statusi -->
+               {% if not lesson.user_hw %}
+                   <span class="bg-blue-500/10 text-blue-400 text-[10px] font-bold px-3 py-1 rounded-full border border-blue-500/20">Topshirish</span>
+               {% elif lesson.user_hw.status == 'submitted' %}
+                   <span class="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">Kutilmoqda</span>
+               {% elif lesson.user_hw.status == 'checked' %}
+                   <span class="bg-mint/10 text-mint text-[10px] font-bold px-3 py-1 rounded-full border border-mint/20">Tekshirildi</span>
+               {% elif lesson.user_hw.status == 'returned' %}
+                   <span class="bg-red-500/10 text-red-500 text-[10px] font-bold px-3 py-1 rounded-full border border-red-500/20">Qaytarildi</span>
                {% endif %}
             </div>
           </div>
@@ -211,9 +231,37 @@
         </div>
       </div>
       
+      <!-- Tugatilgan Kurslar -->
+      {% if completed_enrollments %}
+      <div class="mt-8 card-bg p-6 rounded-2xl border border-gray-700 shadow-lg">
+        <h3 class="font-bold text-lg mb-6 text-white tracking-wide border-b border-gray-700 pb-3 flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-mint"></i> Tugatilgan kurslar
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for enr in completed_enrollments %}
+          <div class="badge-bg p-5 rounded-xl border border-gray-700 hover:border-mint transition group relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-mint/5 rounded-full blur-xl group-hover:scale-150 transition"></div>
+            <div class="flex flex-col h-full">
+              <div class="mb-4">
+                <h4 class="text-white font-bold">{{ enr.group.course.title }}</h4>
+                <p class="text-gray-500 text-xs mt-1">Guruh: {{ enr.group.name }}</p>
+              </div>
+              <div class="mt-auto flex items-center justify-between">
+                <span class="bg-mint/10 text-mint text-[10px] uppercase font-bold px-2 py-0.5 rounded">Yakunlangan</span>
+                <a href="{% url 'courses:lesson_list' enr.group.id %}" class="text-mint text-xs font-bold hover:underline flex items-center gap-1">
+                    Darslarni ko'rish <i class="fa-solid fa-arrow-right text-[9px]"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Sertifikatlar qismi (Pastda) -->
       {% if certificates %}
-      <div class="mt-6 card-bg p-6 rounded-2xl border border-gray-700 shadow-lg">
+      <div id="certificate-section" class="mt-6 card-bg p-6 rounded-2xl border border-gray-700 shadow-lg scroll-mt-6">
         <div class="flex justify-between items-center mb-6">
           <h3 class="font-bold text-lg text-white tracking-wide">Mening Sertifikatlarim</h3>
         </div>
@@ -235,7 +283,7 @@
 
       <!-- Online To'lov Bo'limi -->
       {% if enrollments %}
-      <div class="mt-6 card-bg p-6 rounded-2xl border border-gray-700 shadow-lg">
+      <div id="payment-section" class="mt-6 card-bg p-6 rounded-2xl border border-gray-700 shadow-lg scroll-mt-6">
         <div class="flex justify-between items-center mb-5">
           <h3 class="font-bold text-lg text-white tracking-wide"><i class="fa-solid fa-credit-card mr-2 text-mint"></i>To'lov Holati</h3>
         </div>

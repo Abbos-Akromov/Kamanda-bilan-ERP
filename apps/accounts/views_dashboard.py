@@ -90,15 +90,25 @@ def student_dashboard(request):
     
     enrollments = Enrollment.objects.filter(student=request.user)
     
-    certificates = Certificate.objects.filter(student=request.user)
+    all_certs = Certificate.objects.filter(student=request.user)
+    certificates = []
+    seen_courses = set()
+    for c in all_certs:
+        if c.course_id not in seen_courses:
+            certificates.append(c)
+            seen_courses.add(c.course_id)
     
-    active_enrollment = enrollments.filter(status='approved').first()
+    active_enrollments = enrollments.filter(status='approved')
+    completed_enrollments = enrollments.filter(status='completed')
+    
+    active_enrollment = active_enrollments.first()
     
     # Check for unpaid enrollments to focus on payments
-    unpaid_enrollment = enrollments.filter(status='approved', amount_paid__lt=F('group__course__price')).exists()
+    unpaid_enrollment = active_enrollments.filter(amount_paid__lt=F('group__course__price')).exists()
     
     context = {
-        'enrollments': enrollments,
+        'active_enrollments': active_enrollments,
+        'completed_enrollments': completed_enrollments,
         'certificates': certificates,
         'active_enrollment': active_enrollment,
         'has_unpaid': unpaid_enrollment,
@@ -120,6 +130,11 @@ def student_dashboard(request):
         completed_exams = ExamResult.objects.filter(student=request.user, exam__group=g).count()
         
         recent_lessons = Lesson.objects.filter(group=g).order_by('-order')[:2]
+        
+        # Add homework status to recent lessons
+        user_homeworks = {h.lesson_id: h for h in Homework.objects.filter(student=request.user, lesson__in=recent_lessons)}
+        for lesson in recent_lessons:
+            lesson.user_hw = user_homeworks.get(lesson.id)
         
         context.update({
             'total_lessons': total_lessons,
@@ -754,3 +769,100 @@ def update_lesson(request, lesson_id):
             
         messages.success(request, f"Dars jadvali yangilandi: {lesson.title}")
     return redirect('dashboard:admin')
+
+# ─────────────────────────────────────────────
+# O'Z PROFILINI TAHRIRLASH VIEW
+# ─────────────────────────────────────────────
+@login_required
+def profile_settings(request):
+    user = request.user
+    from django.contrib.auth import update_session_auth_hash
+
+    if request.method == 'POST':
+        # Qaysi forma yuborilganini tekshiramiz
+        action = request.POST.get('action')
+
+        if action == 'update_info':
+            # Rasm
+            if 'avatar' in request.FILES:
+                user.avatar = request.FILES['avatar']
+                
+            # Ma'lumotlar
+            user.first_name = request.POST.get('first_name', user.first_name).strip()
+            user.last_name = request.POST.get('last_name', user.last_name).strip()
+            user.bio = request.POST.get('bio', user.bio).strip()
+            
+            # Username va Email (Ehtiyot bo'lamiz, email unikal bo'lishi kerak)
+            new_email = request.POST.get('email', '').strip()
+            if new_email and new_email != user.email:
+                if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+                    messages.error(request, 'Bu elektron pochta (login) allaqachon band. Boshqa kirikting.')
+                    return redirect('auth:profile')
+                user.email = new_email
+                user.username = new_email # Username email bilan bir xil ishlatiladi
+
+            user.save()
+            messages.success(request, "Profilingiz muvaffaqiyatli saqlandi!")
+
+        elif action == 'update_password':
+            old_pass = request.POST.get('old_password')
+            new_pass = request.POST.get('new_password')
+            confirm_pass = request.POST.get('confirm_password')
+
+            if not user.check_password(old_pass):
+                messages.error(request, "Xozirgi parolingiz noto'g'ri kiritildi.")
+            elif new_pass != confirm_pass:
+                messages.error(request, "Yangi parollar bir-biriga mos tushmadi.")
+            elif len(new_pass) < 6:
+                messages.error(request, "Yangi parol kamida 6ta belgidan iborat bo'lishi kerak.")
+            else:
+                user.set_password(new_pass)
+                user.save()
+                # Sessiya uzilmasligi uchun:
+                update_session_auth_hash(request, user)
+                messages.success(request, "Parolingiz muvaffaqiyatli almashtirildi!")
+
+        return redirect('auth:profile')
+
+    return render(request, 'accounts/profile.html', {'profile': user})
+
+# ─────────────────────────────────────────────
+# OMMAVIY PROFIL VIEW (HAMMA KO'RA OLADI)
+# ─────────────────────────────────────────────
+@login_required
+def public_profile(request, user_id):
+    from django.shortcuts import get_object_or_404
+    from django.http import Http404
+
+    target_user = get_object_or_404(User, id=user_id)
+
+    # O'zining profiliga bosib kirmasin (ixtiyoriy, lekin redirect qilgan yaxshi)
+    if target_user == request.user:
+        return redirect('auth:profile')
+
+    # Adminlarni boshqalar ko'ra olmasligi uchun tekshiramiz
+    if target_user.role == 'admin':
+        from django.contrib import messages
+        messages.error(request, "Ushbu profil yopiq (Maxfiylik daxlsizligi). Admin profiliga kirish mumkin emas.")
+        # Http404 o'rniga muloyim tarzda ortga qaytarib yuboramiz
+        referer = request.META.get('HTTP_REFERER')
+        if referer:
+            return redirect(referer)
+        return redirect('/')
+
+    return render(request, 'accounts/public_profile.html', {'target_user': target_user})
+
+@login_required
+@role_required('admin', 'teacher', 'assistant')
+def graduated_students_list(request):
+    """Kursni muvaffaqiyatli tugatgan o'quvchilar ro'yxati"""
+    graduates = Enrollment.objects.filter(status='completed').select_related('student', 'group__course').order_by('-enrolled_at')
+    
+    # Guruh bo'yicha qidirish imkoniyati
+    group_id = request.GET.get('group')
+    if group_id:
+        graduates = graduates.filter(group_id=group_id)
+        
+    return render(request, 'dashboard/graduated_students.html', {
+        'graduates': graduates,
+    })

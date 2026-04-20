@@ -10,12 +10,62 @@
       .card-bg { background-color: #1a1c23; }
       .chat-me { background: linear-gradient(135deg, #00e699 0%, #00cc88 100%); color: #064e3b; border-radius: 18px 18px 2px 18px; }
       .chat-other { background-color: #252830; color: #e2e8f0; border-radius: 18px 18px 18px 2px; border: 1px solid rgba(255, 255, 255, 0.05); }
+      .chat-deleted { background-color: #1e2028 !important; color: #6b7280 !important; font-style: italic; border-radius: 18px; border: 1px dashed rgba(255,255,255,0.08) !important; }
       .sidebar-item-active { background: rgba(0, 230, 153, 0.08); border-left: 3px solid #00e699; }
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
       .message-time { font-size: 9px; opacity: 0.6; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
       .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+      /* Message actions dropdown */
+      .msg-dropdown-container {
+         position: relative; display: inline-block; margin: 0 4px;
+         opacity: 0; transition: opacity 0.2s;
+      }
+      .msg-wrapper:hover .msg-dropdown-container { opacity: 1; }
+      .msg-dropdown-trigger {
+         width: 24px; height: 24px; border-radius: 50%;
+         display: flex; align-items: center; justify-content: center;
+         color: #9ca3af; cursor: pointer; transition: background 0.2s;
+      }
+      .msg-dropdown-trigger:hover { background: rgba(255,255,255,0.1); color: #fff; }
+      .msg-dropdown-menu {
+         display: none; position: absolute; top: 100%; z-index: 50;
+         background: #1a1c23; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+         padding: 4px; min-width: 120px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      }
+      .msg-dropdown-menu.show { display: block; }
+      .msg-dropdown-menu.right-side { right: 0; }
+      .msg-dropdown-menu.left-side { left: 0; }
+      .msg-dropdown-item {
+         width: 100%; text-align: left; padding: 8px 12px; font-size: 12px;
+         color: #e2e8f0; border-radius: 6px; transition: background 0.15s;
+         display: flex; align-items: center; cursor: pointer;
+      }
+      .msg-dropdown-item i { margin-right: 8px; width: 14px; text-align: center; }
+      .msg-dropdown-item.edit:hover { background: rgba(0,230,153,0.1); color: #00e699; }
+      .msg-dropdown-item.del:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+
+      /* Edit modal */
+      #edit-modal {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.7); z-index: 100;
+        align-items: center; justify-content: center;
+      }
+      #edit-modal.open { display: flex; }
+      #edit-modal-box {
+        background: #1a1c23; border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px; padding: 24px; width: 90%; max-width: 480px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      }
+      #edit-input {
+        width: 100%; background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+        color: #e2e8f0; padding: 10px 14px; font-size: 14px; resize: none;
+        min-height: 80px;
+      }
+      #edit-input:focus { outline: none; border-color: #00e699; }
     </style>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/inter-ui/3.19.3/inter.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -33,24 +83,27 @@
                 <span class="text-white font-bold text-lg">Muloqot xonasi</span>
             </div>
         </div>
-        
         <div class="flex items-center space-x-4">
             <div class="flex flex-col items-end mr-2">
                 <span class="text-white font-bold text-sm">{{ user.get_full_name|default:user.username }}</span>
                 <span class="text-[10px] text-mint font-bold uppercase tracking-tighter">{{ user.get_role_display|default:user.role }}</span>
             </div>
-            <div class="w-10 h-10 rounded-full bg-mint flex items-center justify-center font-bold text-green-900 border-2 border-mint/20">
-                {{ user.username|first|upper }}
+            <div class="w-10 h-10 rounded-full bg-mint flex items-center justify-center font-bold text-green-900 border-2 border-mint/20 overflow-hidden">
+                {% if user.avatar %}
+                    <img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="w-full h-full object-cover">
+                {% else %}
+                    {{ user.username|first|upper }}
+                {% endif %}
             </div>
+
         </div>
     </nav>
 
     <!-- Main Layout -->
     <div class="flex flex-1 overflow-hidden">
-        
+
         <!-- SIDEBAR -->
         <aside class="w-80 shrink-0 border-r border-white/5 flex flex-col bg-[#0d0f14]">
-            <!-- Search sidebar -->
             <div class="p-4 border-b border-white/5">
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
@@ -65,9 +118,7 @@
                     <div class="space-y-1">
                         {% for g in groups %}
                         <a href="{% url 'chat:group' g.id %}" data-search="{{ g.name }} {{ g.course.title }}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'group' and chat_group.id == g.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
-                            <div class="w-10 h-10 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center text-mint font-bold">
-                                #
-                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center text-mint font-bold">#</div>
                             <div class="flex-1 overflow-hidden">
                                 <div class="flex justify-between items-start">
                                     <h4 class="font-bold text-sm text-white truncate">{{ g.name }}</h4>
@@ -87,11 +138,16 @@
                         {% for c in contacts %}
                         <a href="{% url 'chat:direct' c.id %}" data-search="{{ c.get_full_name|default:c.username }} {{ c.role }}" class="flex items-center space-x-3 p-3 rounded-xl transition group {% if mode == 'direct' and chat_partner.id == c.id %}sidebar-item-active{% else %}hover:bg-white/5{% endif %}">
                             <div class="relative">
-                                <div class="w-10 h-10 rounded-full bg-gray-800 border border-white/5 flex items-center justify-center font-bold text-gray-400">
-                                    {{ c.username|first|upper }}
+                                <div class="w-10 h-10 rounded-full bg-gray-800 border border-white/5 flex items-center justify-center font-bold text-gray-400 overflow-hidden">
+                                    {% if c.avatar %}
+                                        <img src="{{ c.avatar.url }}" alt="{{ c.username }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                        {{ c.username|first|upper }}
+                                    {% endif %}
                                 </div>
                                 <div class="absolute bottom-0 right-0 w-3 h-3 bg-mint border-2 border-[#0d0f14] rounded-full"></div>
                             </div>
+
                             <div class="flex-1 overflow-hidden">
                                 <div class="flex justify-between items-start">
                                     <h4 class="font-bold text-sm text-white truncate">{{ c.get_full_name|default:c.username }}</h4>
@@ -120,37 +176,95 @@
                 <!-- Chat Header -->
                 <div class="glass p-4 shrink-0 flex items-center justify-between border-b border-white/5 shadow-lg">
                     <div class="flex items-center space-x-3">
+                        {% if mode == 'direct' %}
+                        <a href="{% url 'accounts:public_profile' chat_partner.id %}" class="flex items-center space-x-3 group">
+                            <div class="w-10 h-10 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center text-mint font-bold text-xl overflow-hidden group-hover:border-mint/50 transition">
+                                {% if chat_partner.avatar %}
+                                    <img src="{{ chat_partner.avatar.url }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    {{ chat_partner.username|first|upper }}
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h2 class="text-white font-bold tracking-tight group-hover:text-mint transition">
+                                    {{ chat_partner.get_full_name|default:chat_partner.username }}
+                                </h2>
+                                <span class="flex items-center text-[10px] text-mint uppercase font-bold tracking-widest mt-0.5">
+                                    <span class="w-1.5 h-1.5 bg-mint rounded-full mr-1.5"></span>
+                                    Online • {{ chat_partner.role }}
+                                </span>
+                            </div>
+                        </a>
+                        {% else %}
                         <div class="w-10 h-10 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center text-mint font-bold text-xl">
-                            {% if mode == 'group' %}#{% else %}{{ chat_partner.username|first|upper }}{% endif %}
+                            #
                         </div>
                         <div>
                             <h2 class="text-white font-bold tracking-tight">
-                                {% if mode == 'group' %}{{ chat_group.name }}{% else %}{{ chat_partner.get_full_name|default:chat_partner.username }}{% endif %}
+                                {{ chat_group.name }}
                             </h2>
                             <span class="flex items-center text-[10px] text-mint uppercase font-bold tracking-widest mt-0.5">
                                 <span class="w-1.5 h-1.5 bg-mint rounded-full mr-1.5"></span>
-                                Online • {% if mode == 'group' %}Guruh muhokamasi{% else %}{{ chat_partner.role }}{% endif %}
+                                Online • Guruh muhokamasi
                             </span>
                         </div>
+                        {% endif %}
                     </div>
+
                     <div class="flex items-center space-x-2">
                         <span class="text-[10px] text-gray-500 font-bold uppercase mr-2 hidden md:block">Xavfsiz ulanish <i class="fa-solid fa-lock ml-1 opacity-50"></i></span>
-                        <button class="w-9 h-9 rounded-lg hover:bg-white/5 text-mint transition flex items-center justify-center border border-mint/20"><i class="fa-solid fa-ellipsis-v"></i></button>
                     </div>
                 </div>
 
                 <!-- Messages area -->
                 <div id="chat-log" class="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col">
                     {% for msg in history %}
-                        <div class="flex w-full {% if msg.sender == user %}justify-end{% else %}justify-start{% endif %} animate-fade-in">
+                        <div class="flex w-full {% if msg.sender == user %}justify-end{% else %}justify-start{% endif %} animate-fade-in" id="msg-row-{{ msg.id }}">
                             <div class="max-w-[75%] md:max-w-[60%] flex flex-col {% if msg.sender == user %}items-end{% endif %}">
                                 {% if msg.sender != user %}
-                                    <span class="text-[10px] font-bold text-gray-500 mb-1 ml-2 uppercase">{{ msg.sender.username }}</span>
+                                    <a href="{% url 'accounts:public_profile' msg.sender.id %}" class="flex items-center mb-1 ml-2 gap-1.5 opacity-80 hover:opacity-100 transition cursor-pointer group">
+                                        {% if msg.sender.avatar %}
+                                            <img src="{{ msg.sender.avatar.url }}" class="w-5 h-5 rounded-full object-cover border border-gray-600">
+                                        {% else %}
+                                            <div class="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[9px] text-white font-bold border border-gray-600">
+                                                {{ msg.sender.first_name|first|default:msg.sender.username|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                        <span class="text-[10px] font-bold text-gray-400 capitalize group-hover:text-mint transition">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
+                                    </a>
                                 {% endif %}
-                                <div class="px-4 py-2.5 text-sm shadow-xl {% if msg.sender == user %}chat-me{% else %}chat-other{% endif %}">
-                                    {{ msg.content }}
+
+                                <!-- Wrapper with actions -->
+                                <div class="msg-wrapper flex items-center {% if msg.sender == user %}flex-row-reverse{% endif %}">
+                                    <div id="msg-bubble-{{ msg.id }}" class="px-4 py-2.5 text-sm shadow-xl {% if msg.sender == user %}chat-me{% else %}chat-other{% endif %} {% if msg.is_deleted %}chat-deleted{% endif %}">
+                                        {% if msg.is_deleted %}
+                                            <i class="fa-solid fa-ban mr-1.5 text-xs"></i>Xabar o'chirildi
+                                        {% else %}
+                                            {{ msg.content }}
+                                        {% endif %}
+                                    </div>
+                                    {% if msg.sender == user and not msg.is_deleted %}
+                                    <div class="msg-dropdown-container">
+                                        <div class="msg-dropdown-trigger" onclick="toggleMsgDropdown(event, this)">
+                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                        </div>
+                                        <div class="msg-dropdown-menu {% if msg.sender == user %}right-side{% else %}left-side{% endif %}">
+                                            <div class="msg-dropdown-item edit" onclick="openEditModal({{ msg.id }}, this)">
+                                                <i class="fa-solid fa-pen"></i> Tahrirlash
+                                            </div>
+                                            <div class="msg-dropdown-item del" onclick="deleteMessage({{ msg.id }})">
+                                                <i class="fa-solid fa-trash"></i> O'chirish
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                <span class="message-time mt-1 mx-2">{{ msg.created_at|date:"H:i" }}</span>
+                                <span class="message-time mt-1 mx-2" id="msg-time-{{ msg.id }}">
+                                    {{ msg.created_at|date:"H:i" }}
+                                    {% if msg.updated_at != msg.created_at and not msg.is_deleted %}
+                                        <span class="italic opacity-70 ml-1">(tahrirlangan)</span>
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                     {% endfor %}
@@ -176,12 +290,35 @@
         </main>
     </div>
 
+    <!-- ===== EDIT MODAL ===== -->
+    <div id="edit-modal">
+        <div id="edit-modal-box">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-white font-bold text-base"><i class="fa-solid fa-pen text-emerald-400 mr-2"></i>Xabarni tahrirlash</h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <textarea id="edit-input" rows="3"></textarea>
+            <div class="flex space-x-3 mt-4">
+                <button onclick="confirmEdit()" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl py-2.5 text-sm transition">
+                    <i class="fa-solid fa-check mr-1.5"></i>Saqlash
+                </button>
+                <button onclick="closeEditModal()" class="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl py-2.5 text-sm transition border border-white/10">
+                    Bekor qilish
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const chatLog = document.getElementById('chat-log');
         const messageInput = document.getElementById('msg-input');
         const chatForm = messageInput ? messageInput.closest('form') : null;
+        const csrfToken = '{{ csrf_token }}';
+        const currentUserId = "{{ user.id }}";
 
-        // Determine room name
+        // ===== WebSocket Setup =====
         {% if mode == 'group' %}
             const roomName = "group_{{ chat_group.id }}";
             const groupId = "{{ chat_group.id }}";
@@ -196,46 +333,45 @@
             const roomName = null;
         {% endif %}
 
-        if (roomName) {
-            console.log("Connecting to WebSocket room:", roomName);
-            const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 
-                         window.location.host + '/ws/chat/' + roomName + '/';
-            
-            let chatSocket = new WebSocket(wsUrl);
+        let chatSocket;
 
-            function connect() {
+        if (roomName) {
+            const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+                         window.location.host + '/ws/chat/' + roomName + '/';
+
+            function connectWS() {
+                chatSocket = new WebSocket(wsUrl);
+
                 chatSocket.onmessage = function(e) {
                     const data = json_parse(e.data);
-                    if (data.message) appendMessage(data);
+                    const action = data.action || 'send';
+                    if (action === 'send' && data.message) {
+                        appendMessage(data);
+                    } else if (action === 'edit') {
+                        applyEdit(data.msg_id, data.content);
+                    } else if (action === 'delete') {
+                        applyDelete(data.msg_id);
+                    }
                 };
 
-                chatSocket.onclose = function(e) {
-                    console.error('Chat socket closed unexpectedly. Reconnecting in 2s...');
-                    setTimeout(function() {
-                        chatSocket = new WebSocket(wsUrl);
-                        connect();
-                    }, 2000);
-                };
-
-                chatSocket.onopen = function(e) {
-                    console.log("WebSocket connection established!");
+                chatSocket.onclose = function() {
+                    setTimeout(connectWS, 2000);
                 };
 
                 chatSocket.onerror = function(e) {
-                    console.error("WebSocket error observed:", e);
+                    console.error("WebSocket error:", e);
                 };
             }
-
-            connect();
+            connectWS();
 
             if (chatForm) {
                 chatForm.onsubmit = function(e) {
                     e.preventDefault();
                     const msg = messageInput.value.trim();
                     if (!msg) return;
-
                     if (chatSocket.readyState === WebSocket.OPEN) {
                         chatSocket.send(JSON.stringify({
+                            'action': 'send',
                             'message': msg,
                             'receiver_id': receiverId || null,
                             'group_id': groupId || null
@@ -243,7 +379,7 @@
                         messageInput.value = '';
                         messageInput.style.height = 'auto';
                     } else {
-                        alert("Xabar yuborib bo'lmadi. Tarmoq bilan ulanishni tekshiring (WebSocket is not open).");
+                        alert("Tarmoq bilan ulanish yo'q.");
                     }
                 };
             }
@@ -252,23 +388,162 @@
         function json_parse(str) { try { return JSON.parse(str); } catch(e) { return {}; } }
 
         function appendMessage(data) {
-            const isMe = data.sender_id == "{{ user.id }}";
+            const isMe = data.sender_id == currentUserId;
             const div = document.createElement('div');
             div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in`;
+            div.id = `msg-row-${data.msg_id}`;
             div.innerHTML = `
                 <div class="max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : ''}">
-                    ${!isMe ? `<span class="text-[10px] font-bold text-gray-500 mb-1 ml-2 uppercase">${data.sender_name}</span>` : ''}
-                    <div class="px-4 py-2.5 text-sm shadow-xl ${isMe ? 'chat-me' : 'chat-other'} font-medium">
-                        ${data.message}
+                    ${!isMe ? `
+                        <a href="/accounts/user/\${data.sender_id}/" class="flex items-center mb-1 ml-2 gap-1.5 opacity-80 hover:opacity-100 transition cursor-pointer group">
+                            ${data.sender_avatar ? 
+                                \`<img src="\${data.sender_avatar}" class="w-5 h-5 rounded-full object-cover border border-gray-600">\` : 
+                                \`<div class="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[9px] text-white font-bold border border-gray-600">\${data.sender_initials}</div>\`
+                            }
+                            <span class="text-[10px] font-bold text-gray-400 capitalize group-hover:text-mint transition">\${data.sender_name}</span>
+                        </a>
+                    ` : ''}
+
+                    <div class="msg-wrapper flex items-center ${isMe ? 'flex-row-reverse' : ''}">
+                        <div id="msg-bubble-${data.msg_id}" class="px-4 py-2.5 text-sm shadow-xl ${isMe ? 'chat-me' : 'chat-other'} font-medium">
+                            ${escapeHtml(data.message)}
+                        </div>
+                        ${isMe ? `
+                        <div class="msg-dropdown-container">
+                            <div class="msg-dropdown-trigger" onclick="toggleMsgDropdown(event, this)">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </div>
+                            <div class="msg-dropdown-menu right-side">
+                                <div class="msg-dropdown-item edit" onclick="openEditModal(${data.msg_id}, this)">
+                                    <i class="fa-solid fa-pen"></i> Tahrirlash
+                                </div>
+                                <div class="msg-dropdown-item del" onclick="deleteMessage(${data.msg_id})">
+                                    <i class="fa-solid fa-trash"></i> O'chirish
+                                </div>
+                            </div>
+                        </div>` : ''}
                     </div>
-                    <span class="message-time mt-1 mx-2">${data.created_at}</span>
+                    <span class="message-time mt-1 mx-2" id="msg-time-${data.msg_id}">${data.created_at}</span>
                 </div>
             `;
             chatLog.appendChild(div);
             chatLog.scrollTop = chatLog.scrollHeight;
         }
 
-        // Sidebar Search
+        // ===== Edit/Delete (real-time via WebSocket) =====
+        function applyEdit(msgId, newContent) {
+            const bubble = document.getElementById(`msg-bubble-${msgId}`);
+            const timeEl = document.getElementById(`msg-time-${msgId}`);
+            if (bubble) {
+                bubble.textContent = newContent;
+                if (timeEl && !timeEl.querySelector('.edited-tag')) {
+                    const tag = document.createElement('span');
+                    tag.className = 'italic opacity-70 ml-1 edited-tag';
+                    tag.textContent = '(tahrirlangan)';
+                    timeEl.appendChild(tag);
+                }
+            }
+        }
+
+        function applyDelete(msgId) {
+            const bubble = document.getElementById(`msg-bubble-${msgId}`);
+            const row = document.getElementById(`msg-row-${msgId}`);
+            if (bubble) {
+                bubble.className = bubble.className.replace('chat-me', '').replace('chat-other', '') + ' chat-deleted';
+                bubble.innerHTML = '<i class="fa-solid fa-ban mr-1.5 text-xs"></i>Xabar o\'chirildi';
+            }
+            // Remove action buttons
+            if (row) {
+                row.querySelectorAll('.msg-dropdown-container').forEach(el => el.remove());
+            }
+        }
+
+        // Dropdown Logic
+        function toggleMsgDropdown(e, el) {
+            e.stopPropagation();
+            document.querySelectorAll('.msg-dropdown-menu.show').forEach(m => {
+                if(m !== el.nextElementSibling) m.classList.remove('show');
+            });
+            el.nextElementSibling.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.msg-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+        });
+
+        // ===== Edit Modal =====
+        let editingMsgId = null;
+
+        function openEditModal(msgId, btn) {
+            editingMsgId = msgId;
+            const bubble = document.getElementById(`msg-bubble-${msgId}`);
+            document.getElementById('edit-input').value = bubble ? bubble.textContent.trim() : '';
+            document.getElementById('edit-modal').classList.add('open');
+            setTimeout(() => document.getElementById('edit-input').focus(), 100);
+        }
+
+        function closeEditModal() {
+            editingMsgId = null;
+            document.getElementById('edit-modal').classList.remove('open');
+        }
+
+        function confirmEdit() {
+            const newContent = document.getElementById('edit-input').value.trim();
+            if (!newContent || !editingMsgId) return;
+
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                // Send via WebSocket for real-time
+                chatSocket.send(JSON.stringify({
+                    action: 'edit',
+                    msg_id: editingMsgId,
+                    content: newContent
+                }));
+            } else {
+                // Fallback: HTTP
+                fetch(`/chat/message/${editingMsgId}/edit/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ content: newContent })
+                }).then(r => r.json()).then(data => {
+                    if (data.success) applyEdit(editingMsgId, newContent);
+                });
+            }
+            closeEditModal();
+        }
+
+        function deleteMessage(msgId) {
+            if (!confirm("Xabarni o'chirmoqchimisiz?")) return;
+
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    action: 'delete',
+                    msg_id: msgId
+                }));
+            } else {
+                fetch(`/chat/message/${msgId}/delete/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken }
+                }).then(r => r.json()).then(data => {
+                    if (data.success) applyDelete(msgId);
+                });
+            }
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('edit-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
+        });
+
+        // Edit modal keyboard: Ctrl+Enter to save
+        document.getElementById('edit-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) confirmEdit();
+            if (e.key === 'Escape') closeEditModal();
+        });
+
+        // ===== Sidebar Search =====
         const searchInput = document.querySelector('input[placeholder="Qidirish..."]');
         if (searchInput) {
             searchInput.addEventListener('input', function(e) {
@@ -292,6 +567,12 @@
                     chatForm.dispatchEvent(new Event('submit'));
                 }
             });
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.appendChild(document.createTextNode(text));
+            return d.innerHTML;
         }
     </script>
 </body>

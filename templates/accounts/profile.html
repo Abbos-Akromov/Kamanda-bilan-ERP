@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto pb-10">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-white tracking-wide"><i class="fa-solid fa-user-gear text-[#00e699] mr-3"></i>Profil Sozlamalari</h1>
+            <p class="text-gray-400 text-sm mt-2">Shaxsiy ma'lumotlaringiz va tizim parolini yangilang.</p>
+        </div>
+        <a href="{% url 'dashboard:home' %}" class="bg-[#252830] text-gray-300 border border-gray-700 px-5 py-2.5 rounded-xl hover:bg-white/5 transition flex items-center gap-2 font-medium">
+            <i class="fa-solid fa-arrow-left"></i> Dashboardga qaytish
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Chap tomondagi avatar va asosiy ma'lumotlar formasi -->
+        <div class="lg:col-span-2 space-y-8">
+            <form action="{% url 'auth:profile' %}" method="POST" enctype="multipart/form-data" class="bg-[#252830] p-8 rounded-3xl border border-gray-700/50 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_info">
+                
+                <h2 class="text-xl font-bold text-white mb-6 border-b border-gray-700/50 pb-4">Shaxsiy Ma'lumotlar</h2>
+                
+                <!-- Avatar upload section -->
+                <div class="flex items-center gap-6 mb-8">
+                    <div class="relative group cursor-pointer">
+                        {% if profile.avatar %}
+                            <img src="{{ profile.avatar.url }}" alt="Avatar" class="w-24 h-24 rounded-full object-cover border-4 border-[#1a1c23] shadow-lg group-hover:opacity-50 transition">
+                        {% else %}
+                            <div class="w-24 h-24 rounded-full bg-[#00e699]/10 flex items-center justify-center font-bold text-[#00e699] text-3xl border-4 border-[#1a1c23] shadow-lg group-hover:bg-[#00e699]/20 transition">
+                                {{ profile.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10">
+                            <label for="avatarUpload" class="cursor-pointer bg-black/50 text-white rounded-full p-2 hover:bg-[#00e699] hover:text-black transition">
+                                <i class="fa-solid fa-camera"></i>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-white font-bold">{{ profile.get_full_name|default:profile.username }}</p>
+                        <p class="text-gray-400 text-sm mb-2 capitalize">{{ profile.role }}</p>
+                        <label for="avatarUpload" class="text-[#00e699] text-xs font-bold uppercase tracking-wider cursor-pointer hover:underline">
+                            + Rasmni almashtirish
+                        </label>
+                        <input type="file" id="avatarUpload" name="avatar" accept="image/*" class="hidden" onchange="this.parentElement.querySelector('#fileName').textContent = this.files[0].name">
+                        <p id="fileName" class="text-gray-500 text-[10px] mt-1 italic"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Ism</label>
+                        <input type="text" name="first_name" value="{{ profile.first_name }}" class="w-full bg-[#1a1c23] border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e699] transition">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Familiya</label>
+                        <input type="text" name="last_name" value="{{ profile.last_name }}" class="w-full bg-[#1a1c23] border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e699] transition">
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Elektron Pochta (Login)</label>
+                    <input type="email" name="email" value="{{ profile.email }}" required class="w-full bg-[#1a1c23] border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e699] transition">
+                    <p class="text-[10px] text-gray-500 mt-2">Ushbu email orqali tizimga kirasiz. O'zgartirsangiz keyingi safar yangi email orqali kirishingiz kerak bo'ladi.</p>
+                </div>
+                
+                <div class="mb-8">
+                    <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Qisqacha Bio (O'zingiz haqingizda)</label>
+                    <textarea name="bio" rows="3" class="w-full bg-[#1a1c23] border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e699] transition">{{ profile.bio }}</textarea>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-[#00e699] text-green-900 font-extrabold px-8 py-3 rounded-xl hover:bg-[#00cc88] transition shadow-lg flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Ma'lumotlarni saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- O'ng tomondagi Parolni o'zgartirish bloki -->
+        <div class="space-y-8">
+            <form action="{% url 'auth:profile' %}" method="POST" class="bg-[#252830] p-8 rounded-3xl border border-gray-700/50 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_password">
+                
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-red-500 opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+
+                <h2 class="text-xl font-bold text-white mb-6 border-b border-gray-700/50 pb-4"><i class="fa-solid fa-shield-halved text-red-400 mr-2"></i>Parolni Yangilash</h2>
+
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Joriy Parol</label>
+                        <input type="password" name="old_password" required class="w-full bg-[#1a1c23] border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-400 transition" placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Yangi Parol</label>
+                        <input type="password" name="new_password" required class="w-full bg-[#1a1c23] border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e699] transition" placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Parolni Tasdiqlang</label>
+                        <input type="password" name="confirm_password" required class="w-full bg-[#1a1c23] border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e699] transition" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full mt-8 bg-red-500/10 text-red-400 border border-red-500/50 font-bold px-6 py-3 rounded-xl hover:bg-red-500 hover:text-white transition shadow-lg">
+                    Parolni Almashtirish
+                </button>
+            </form>
+            
+            <div class="bg-[#1a1c23] border border-gray-800 p-6 rounded-2xl flex items-start gap-4 text-gray-500 text-sm">
+                <i class="fa-solid fa-circle-info text-blue-500 mt-1"></i>
+                <p>Parolingizni kuchli ushlab qoling. Parolda katta va kichik harflar hamda raqamlar bo'lishi xavfsizlikni oshiradi.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

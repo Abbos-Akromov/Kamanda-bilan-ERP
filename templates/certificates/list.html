@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-[#0f172a] text-slate-200 p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div class="flex items-center gap-4">
+                <a href="{% url 'dashboard:home' %}" class="w-12 h-12 rounded-2xl bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 hover:border-indigo-500/50 text-slate-400 hover:text-indigo-400 transition-all duration-300 flex items-center justify-center shrink-0 group" title="Orqaga qaytish">
+                    <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold text-white mb-2">Sertifikatlar Boshqaruvi</h1>
+                    <p class="text-slate-400">Barcha berilgan sertifikatlarni ko'rish va boshqarish paneli</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'certificates:issue' %}" class="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-indigo-500/20 group">
+                    <svg class="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Yangi sertifikat berish
+                </a>
+            </div>
+        </div>
+
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 p-6 rounded-2xl">
+                <p class="text-slate-400 text-sm mb-1">Jami sertifikatlar</p>
+                <p class="text-3xl font-bold text-white">{{ certificates.count }}</p>
+            </div>
+            <div class="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 p-6 rounded-2xl">
+                <p class="text-slate-400 text-sm mb-1">Faol</p>
+                <p class="text-3xl font-bold text-emerald-400">
+                    {{ certificates.all|dictsort:"is_active"|last }} <!-- Quick hack for counting if logic allows, but let's keep it simple for now -->
+                    {% with active_count=0 %}
+                        {% for c in certificates %}{% if c.is_active %}{% increment active_count %}{% endif %}{% endfor %}
+                    {% endwith %}
+                </p>
+                <!-- Actually, let's just show the list for now -->
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/50">
+                            <th class="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">Talaba</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">Kurs</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">Sana</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">Holat</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-slate-300 uppercase tracking-wider text-right">Amallar</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700/50">
+                        {% for cert in certificates %}
+                        <tr class="hover:bg-slate-700/30 transition-colors duration-200">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
+                                        {{ cert.student.first_name|first }}{{ cert.student.last_name|first }}
+                                    </div>
+                                    <div>
+                                        <div class="text-white font-medium">{{ cert.student.get_full_name }}</div>
+                                        <div class="text-slate-400 text-xs">{{ cert.student.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 rounded-full bg-slate-700/50 text-slate-300 text-sm">
+                                    {{ cert.course.title }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-slate-400 text-sm">
+                                {{ cert.issued_at|date:"d.m.Y" }}
+                            </td>
+                            <td class="px-6 py-4">
+                                {% if cert.is_active %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    <span class="w-1 h-1 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
+                                    Faol
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                    <span class="w-1 h-1 rounded-full bg-rose-400 mr-2"></span>
+                                    Bekor qilingan
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-right space-x-2">
+                                <a href="{{ cert.pdf_file.url }}" target="_blank" class="p-2 text-slate-400 hover:text-white transition-colors" title="Yuklab olish">
+                                    <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'certificates:verify' cert.verification_code %}" class="p-2 text-slate-400 hover:text-indigo-400 transition-colors" title="Ko'rish">
+                                    <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'certificates:revoke' cert.pk %}" class="p-2 {% if cert.is_active %}text-rose-400 hover:text-rose-300{% else %}text-emerald-400 hover:text-emerald-300{% endif %} transition-colors" title="{% if cert.is_active %}Bekor qilish{% else %}Faollashtirish{% endif %}">
+                                    {% if cert.is_active %}
+                                    <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    {% else %}
+                                    <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-slate-500 italic">
+                                Hozircha hech qanday sertifikat berilmagan.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+    }
+    .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+</style>
+{% endblock %}

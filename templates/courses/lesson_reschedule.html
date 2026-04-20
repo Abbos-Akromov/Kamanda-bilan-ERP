@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darsni Ko'chirish | Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0d0f14; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(26,28,35,0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.07); }
+        .input-field {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            width: 100%;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { outline: none; border-color: #00e699; }
+        .input-field::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.5; }
+        .btn-primary {
+            background: linear-gradient(135deg, #00e699, #00cc88);
+            color: #064e3b;
+            font-weight: 700;
+            border-radius: 12px;
+            padding: 12px 28px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,230,153,0.3); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px 28px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+        .info-card { background: rgba(0,230,153,0.05); border: 1px solid rgba(0,230,153,0.15); border-radius: 12px; padding: 16px; }
+        .error-card { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; padding: 12px 16px; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-lg">
+
+        <!-- Back button -->
+        <a href="{% url 'courses:lesson_list' lesson.group_id %}"
+           class="inline-flex items-center text-sm text-gray-400 hover:text-white mb-6 transition group">
+            <i class="fa-solid fa-arrow-left mr-2 group-hover:-translate-x-1 transition"></i>
+            Darslar ro'yxatiga qaytish
+        </a>
+
+        <!-- Card -->
+        <div class="glass rounded-2xl p-8 shadow-2xl">
+
+            <!-- Header -->
+            <div class="flex items-center space-x-4 mb-8">
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                    <i class="fa-solid fa-calendar-xmark text-amber-400 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white">Darsni Ko'chirish</h1>
+                    <p class="text-xs text-gray-500 mt-0.5">Faqat admin uchun</p>
+                </div>
+            </div>
+
+            <!-- Current lesson info -->
+            <div class="info-card mb-6">
+                <p class="text-xs text-emerald-400 font-bold uppercase tracking-wider mb-2">Joriy dars ma'lumoti</p>
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Dars nomi:</span>
+                        <span class="text-white font-semibold">{{ lesson.title }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Guruh:</span>
+                        <span class="text-white">{{ lesson.group.name }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Joriy sana:</span>
+                        <span class="text-white">{{ lesson.date|default:"Belgilanmagan" }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Joriy vaqt:</span>
+                        <span class="text-white">
+                            {% if lesson.start_time %}{{ lesson.start_time|time:"H:i" }}{% else %}{{ lesson.group.lesson_start_time|time:"H:i" }}{% endif %}
+                            – 
+                            {% if lesson.end_time %}{{ lesson.end_time|time:"H:i" }}{% else %}{{ lesson.group.lesson_end_time|time:"H:i" }}{% endif %}
+                        </span>
+                    </div>
+                    {% if lesson.started_at %}
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Holati:</span>
+                        <span class="text-amber-400 font-semibold">⚠️ Dars boshlangan!</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Errors -->
+            {% if errors %}
+            <div class="error-card mb-6">
+                <ul class="space-y-1">
+                    {% for error in errors %}
+                    <li class="text-red-400 text-sm flex items-center">
+                        <i class="fa-solid fa-circle-exclamation mr-2 text-xs"></i>{{ error }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Form -->
+            <form method="POST" class="space-y-5">
+                {% csrf_token %}
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        <i class="fa-regular fa-calendar mr-1.5 text-emerald-400"></i>Yangi sana*
+                    </label>
+                    <input
+                        type="date"
+                        name="new_date"
+                        class="input-field"
+                        value="{{ lesson.date|date:'Y-m-d' }}"
+                        required
+                    >
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                            <i class="fa-regular fa-clock mr-1.5 text-emerald-400"></i>Boshlanish vaqti*
+                        </label>
+                        <input
+                            type="time"
+                            name="new_start_time"
+                            class="input-field"
+                            value="{% if lesson.start_time %}{{ lesson.start_time|time:'H:i' }}{% else %}{{ lesson.group.lesson_start_time|time:'H:i' }}{% endif %}"
+                            required
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                            <i class="fa-regular fa-clock mr-1.5 text-gray-500"></i>Tugash vaqti
+                        </label>
+                        <input
+                            type="time"
+                            name="new_end_time"
+                            class="input-field"
+                            value="{% if lesson.end_time %}{{ lesson.end_time|time:'H:i' }}{% else %}{{ lesson.group.lesson_end_time|time:'H:i' }}{% endif %}"
+                        >
+                    </div>
+                </div>
+
+                {% if lesson.started_at %}
+                <div class="flex items-start space-x-2 bg-amber-500/5 border border-amber-500/15 rounded-xl p-4">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 text-sm flex-shrink-0"></i>
+                    <p class="text-xs text-amber-300">Bu dars allaqachon boshlangan. Ko'chirish faqat sana ma'lumotini yangilaydi.</p>
+                </div>
+                {% endif %}
+
+                <div class="flex items-center space-x-3 pt-2">
+                    <button type="submit" class="btn-primary flex-1">
+                        <i class="fa-solid fa-calendar-check mr-2"></i>Ko'chirish
+                    </button>
+                    <a href="{% url 'courses:lesson_list' lesson.group_id %}" class="btn-secondary">
+                        Bekor qilish
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

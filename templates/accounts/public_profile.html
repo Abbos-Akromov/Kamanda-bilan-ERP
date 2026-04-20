@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto pb-10">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-white tracking-wide"><i class="fa-solid fa-address-card text-[#00e699] mr-3"></i>Profil</h1>
+            <p class="text-gray-400 text-sm mt-2">Ma'lumotlar bilan tanishish oynasi.</p>
+        </div>
+        <button onclick="history.back()" class="bg-[#252830] hover:bg-[#1a1c23] text-gray-300 border border-gray-700 px-5 py-2.5 rounded-xl transition flex items-center gap-2 font-medium">
+            <i class="fa-solid fa-arrow-left"></i> Ortga
+        </button>
+    </div>
+
+    <div class="bg-[#252830] p-8 rounded-3xl border border-gray-700/50 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+        
+        <!-- Yuqorida yaltiroq effekt uchun dizayn -->
+        <div class="absolute -right-10 -top-10 w-32 h-32 bg-[#00e699] opacity-5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex flex-col items-center justify-center text-center">
+            
+            <!-- Avatar qismi -->
+            <div class="relative group mb-6">
+                {% if target_user.avatar %}
+                    <img src="{{ target_user.avatar.url }}" alt="Avatar" class="w-32 h-32 rounded-full object-cover border-4 border-[#1a1c23] shadow-lg cursor-pointer transition transform hover:scale-105" onclick="document.getElementById('avatarModal').style.display='flex'">
+                {% else %}
+                    <div class="w-32 h-32 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-800 text-5xl border-4 border-[#1a1c23] shadow-lg cursor-default">
+                        {{ target_user.first_name|first|default:target_user.username|first|upper }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Ma'lumot qismi -->
+            <h2 class="text-2xl font-bold text-white tracking-tight mb-1">{{ target_user.get_full_name|default:target_user.username }}</h2>
+            <p class="text-[12px] font-black text-[#00e699] tracking-widest uppercase mb-4">{{ target_user.get_role_display|default:target_user.role }}</p>
+
+            {% if target_user.bio %}
+            <div class="bg-[#1a1c23] p-5 rounded-2xl border border-gray-700 w-full mb-6">
+                <p class="text-left text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Qisqacha Bio (Haqida)</p>
+                <div class="text-gray-300 text-sm text-left leading-relaxed">
+                    {{ target_user.bio|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-2 gap-4 w-full">
+                <div class="bg-[#1a1c23] p-4 rounded-2xl border border-gray-700 text-left">
+                    <p class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Qo'shilgan sana</p>
+                    <p class="text-white font-medium text-sm">{{ target_user.date_joined|date:"d M Y" }}</p>
+                </div>
+                <!-- Foydalanuvchiga tegishli guruhlar yoki chat tugmasi -->
+                <a href="{% url 'chat:direct' target_user.id %}" class="bg-[#00e699]/10 hover:bg-[#00e699]/20 border border-[#00e699]/30 text-[#00e699] p-4 rounded-2xl text-left transition flex items-center gap-3">
+                    <i class="fa-solid fa-comment-dots text-xl"></i>
+                    <div>
+                        <p class="text-[#00e699]/60 text-[10px] font-bold uppercase tracking-wider mb-1">Muloqot</p>
+                        <p class="text-[#00e699] font-bold text-sm">Xabar yuborish</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Katta rasmni ko'rish (Zoom) Modali -->
+{% if target_user.avatar %}
+<div id="avatarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(5px);" onclick="if(event.target===this) this.style.display='none'">
+    <div class="relative max-w-[90vw] max-h-[90vh]">
+        <button onclick="document.getElementById('avatarModal').style.display='none'" class="absolute -top-10 right-0 text-white hover:text-red-400 transition" style="font-size:30px;">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <img src="{{ target_user.avatar.url }}" class="rounded-2xl max-w-full max-h-[85vh] object-contain shadow-2xl border-4 border-[#252830]">
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
